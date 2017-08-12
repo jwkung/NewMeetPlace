@@ -5,7 +5,6 @@ import android.app.Fragment;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
-import android.provider.Settings;
 import android.support.design.widget.FloatingActionButton;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -24,7 +23,6 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.Query;
 
-
 import tw.com.example.ben.sharehouse.CHAT.dataModel.House;
 import tw.com.example.ben.sharehouse.CHAT.dataModel.MyUser;
 import tw.com.example.ben.sharehouse.R;
@@ -35,16 +33,18 @@ import tw.com.example.ben.sharehouse.lib.TinyDB;
  * Created by Ben on 16/8/8.
  */
 public class house_list_controler extends Fragment {
-    ListView listView;
-    int i=1;
-    ChatApplication GV;
+
     private static String FIREBASE_URL;
     private Firebase mFirebaseRef;
-    house_list_adapter chatContactAdapter;
-    FloatingActionButton fab;
+
+    ChatApplication GV;
     TinyDB tinydb;
     String uid;
-    private android.app.FragmentManager mFragmentMgr;
+    int i=1;
+
+    house_list_adapter chatContactAdapter;
+    FloatingActionButton fab;
+    ListView listView;
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState)
     {
         GV = ((ChatApplication) getActivity().getApplicationContext());

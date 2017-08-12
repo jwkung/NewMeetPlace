@@ -20,7 +20,7 @@ public class House {
         FirebaseDatabase db = FirebaseDatabase.getInstance();
         DatabaseReference Ref= db.getReference("roomTables").push();
         this.roomTable = Ref.toString();
-        this.name="預設";
+        this.name="hey, homie!";
         DatabaseReference Ref2= db.getReference("houses").push();
         this.url=Ref2.toString();
         DatabaseReference Ref3= db.getReference("chat").push();
