@@ -2,6 +2,7 @@ package tw.com.example.ben.sharehouse.CHAT;
 
 import android.content.Intent;
 import android.database.DataSetObserver;
+import android.media.Image;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
@@ -11,6 +12,7 @@ import android.text.TextWatcher;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.ListView;
 
 import com.firebase.client.Firebase;
@@ -24,6 +26,7 @@ import tw.com.example.ben.sharehouse.CHAT.dataModel.Chat;
 import tw.com.example.ben.sharehouse.CHAT.dataModel.MyUser;
 import tw.com.example.ben.sharehouse.R;
 import tw.com.example.ben.sharehouse.lib.TinyDB;
+import tw.com.example.ben.sharehouse.ui.IconSmallerOnTouchListener;
 
 public class chat_main_layout_controler extends AppCompatActivity {
 
@@ -36,7 +39,7 @@ public class chat_main_layout_controler extends AppCompatActivity {
     private FirebaseListAdapter mChatListAdapter;
     private FirebaseStorage mFirebaseStorage;
     private StorageReference mChatPhotosStorageReferenece;
-    private ImageButton send ,pic;
+    private ImageView send ,pic;
     private EditText mMessageEditText;
     ListView listView;
     @Override
@@ -50,8 +53,8 @@ public class chat_main_layout_controler extends AppCompatActivity {
 
         mChatPhotosStorageReferenece = mFirebaseStorage.getReference().child("chat_photos");
 
-        send = (ImageButton) findViewById(R.id.sendButton);
-        pic = (ImageButton) findViewById( R.id.pic);
+        send = (ImageView) findViewById(R.id.sendButton);
+        pic = (ImageView) findViewById( R.id.pic);
         mMessageEditText = (EditText) findViewById( R.id.messageInput) ;
 
         Intent it = getIntent();
@@ -97,6 +100,7 @@ public class chat_main_layout_controler extends AppCompatActivity {
                 startActivityForResult(Intent.createChooser(intent, "Complete action using"), RC_PHOTO_PICKER);
             }
         });
+        pic.setOnTouchListener(new IconSmallerOnTouchListener());
 
 
         send.setOnClickListener(new View.OnClickListener() {
@@ -110,6 +114,8 @@ public class chat_main_layout_controler extends AppCompatActivity {
                 mMessageEditText.setText("");
             }
         });
+        send.setOnTouchListener(new IconSmallerOnTouchListener());
+
         mChatListAdapter = new FirebaseListAdapter(mFirebaseRef.limit(50), this, mUsername,R.layout.chat_user1_item);
         //綁定adapter
         listView.setAdapter(mChatListAdapter);
