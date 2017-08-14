@@ -40,7 +40,6 @@ public class house_list_controler extends Fragment {
     ChatApplication GV;
     TinyDB tinydb;
     String uid;
-    int i=1;
 
     house_list_adapter chatContactAdapter;
     FloatingActionButton fab;
@@ -48,7 +47,6 @@ public class house_list_controler extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState)
     {
         GV = ((ChatApplication) getActivity().getApplicationContext());
-        GV.setFlag_D(1);
         //將XML轉換成VIEW
         View view =inflater.inflate(R.layout.chat_house_list_layout,container,false);
         listView = (ListView) view.findViewById(R.id.contactList);
@@ -97,6 +95,7 @@ public class house_list_controler extends Fragment {
                                    if (dataSnapshot.exists()){
                                        String Key2 = dataSnapshot.getRef().getKey().toString();
                                        Key2 = "https://sharehousetest.firebaseio.com/houses/"+Key2;
+                                       GV.setKEY_TWO(Key2);
                                        MyUser myUser= (MyUser) tinydb.getObject("MyUser", MyUser.class);
                                        String UserKey = myUser.getNickname();
 
@@ -106,11 +105,31 @@ public class house_list_controler extends Fragment {
                                            @Override
                                            public void onChildAdded(DataSnapshot dataSnapshot2, String s2) {
                                                if (dataSnapshot2.exists()){
+                                                   Query delete3Query = Ref.child("userHouseTables").orderByChild("url").equalTo(GV.getKEY_TWO());
+                                                   delete3Query.addChildEventListener(new ChildEventListener() {
+                                                       @Override
+                                                       public void onChildAdded(DataSnapshot dataSnapshot3, String s) {
+                                                           if ( dataSnapshot3.exists() ){
+                                                               dataSnapshot3.getRef().setValue(null);
+                                                           }
+                                                       }
+
+                                                       @Override
+                                                       public void onChildChanged(DataSnapshot dataSnapshot, String s) {                     }
+
+                                                       @Override
+                                                       public void onChildRemoved(DataSnapshot dataSnapshot) {       }
+
+                                                       @Override
+                                                       public void onChildMoved(DataSnapshot dataSnapshot, String s) {       }
+
+                                                       @Override
+                                                       public void onCancelled(DatabaseError databaseError) {   }
+                                                   });
                                                    String Key3 = dataSnapshot2.getRef().getKey().toString();
                                                    Log.e("ChatDelete3", "ChatDelete3"+Key3);
-                                                   GV.setFlag_D(2);
-                                                   Log.e("delete2Query Flag","Flag"+ GV.getFlag_D());
                                                    dataSnapshot2.getRef().setValue(null);
+                                                   //new Firebase(GV.getKEY_TWO()).removeValue();
                                                }
                                            }
                                            @Override
@@ -123,11 +142,11 @@ public class house_list_controler extends Fragment {
                                            public void onCancelled(DatabaseError databaseError2) {}
                                        });
 
-                                       if ( GV.getFlag_D() == 2){
+                                      /* if ( GV.getFlag_D() == 2){
                                            Log.e("delete2Query Flag1","Flag"+ GV.getFlag_D());
                                            dataSnapshot.getRef().setValue(null);
                                            GV.setFlag_D(1);
-                                       }
+                                       }*/
                                    }
                                }
                                @Override
