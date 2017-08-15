@@ -99,18 +99,21 @@ public class house_list_controler extends Fragment {
                                        MyUser myUser= (MyUser) tinydb.getObject("MyUser", MyUser.class);
                                        String UserKey = myUser.getNickname();
 
+
                                        Query delete2Query = Ref.child("userHouseTables").child(UserKey).orderByChild("url").equalTo(Key2);
                                        Log.e("ChatDelete2", "ChatDelete2"+Key2);
                                        delete2Query.addChildEventListener(new ChildEventListener() {
                                            @Override
                                            public void onChildAdded(DataSnapshot dataSnapshot2, String s2) {
                                                if (dataSnapshot2.exists()){
-                                                   Query delete3Query = Ref.child("userHouseTables").orderByChild("url").equalTo(GV.getKEY_TWO());
+                                                   String Key3 = dataSnapshot2.getRef().getKey().toString();
+                                                   Log.e("ChatDelete3", "ChatDelete3"+Key3);
+                                                   Query delete3Query = Ref.child("userHouseTables").orderByChild("url").limitToLast(1).equalTo(GV.getKEY_TWO());
                                                    delete3Query.addChildEventListener(new ChildEventListener() {
                                                        @Override
                                                        public void onChildAdded(DataSnapshot dataSnapshot3, String s) {
                                                            if ( dataSnapshot3.exists() ){
-                                                               dataSnapshot3.getRef().setValue(null);
+                                                               //dataSnapshot3.getRef().setValue(null);
                                                            }
                                                        }
 
@@ -126,8 +129,7 @@ public class house_list_controler extends Fragment {
                                                        @Override
                                                        public void onCancelled(DatabaseError databaseError) {   }
                                                    });
-                                                   String Key3 = dataSnapshot2.getRef().getKey().toString();
-                                                   Log.e("ChatDelete3", "ChatDelete3"+Key3);
+
                                                    dataSnapshot2.getRef().setValue(null);
                                                    //new Firebase(GV.getKEY_TWO()).removeValue();
                                                }
@@ -141,12 +143,6 @@ public class house_list_controler extends Fragment {
                                            @Override
                                            public void onCancelled(DatabaseError databaseError2) {}
                                        });
-
-                                      /* if ( GV.getFlag_D() == 2){
-                                           Log.e("delete2Query Flag1","Flag"+ GV.getFlag_D());
-                                           dataSnapshot.getRef().setValue(null);
-                                           GV.setFlag_D(1);
-                                       }*/
                                    }
                                }
                                @Override

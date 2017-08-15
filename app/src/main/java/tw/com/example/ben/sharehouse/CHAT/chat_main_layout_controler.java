@@ -2,7 +2,6 @@ package tw.com.example.ben.sharehouse.CHAT;
 
 import android.content.Intent;
 import android.database.DataSetObserver;
-import android.media.Image;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
@@ -11,7 +10,6 @@ import android.text.InputFilter;
 import android.text.TextWatcher;
 import android.view.View;
 import android.widget.EditText;
-import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.ListView;
 
@@ -39,7 +37,7 @@ public class chat_main_layout_controler extends AppCompatActivity {
     private FirebaseListAdapter mChatListAdapter;
     private FirebaseStorage mFirebaseStorage;
     private StorageReference mChatPhotosStorageReferenece;
-    private ImageView send ,pic;
+    private ImageView send ,pic ,map;
     private EditText mMessageEditText;
     ListView listView;
     @Override
@@ -55,6 +53,7 @@ public class chat_main_layout_controler extends AppCompatActivity {
 
         send = (ImageView) findViewById(R.id.sendButton);
         pic = (ImageView) findViewById( R.id.pic);
+        map = (ImageView) findViewById( R.id.mapB);
         mMessageEditText = (EditText) findViewById( R.id.messageInput) ;
 
         Intent it = getIntent();
@@ -101,6 +100,14 @@ public class chat_main_layout_controler extends AppCompatActivity {
             }
         });
         pic.setOnTouchListener(new IconSmallerOnTouchListener());
+
+        map.setOnClickListener(new View.OnClickListener(){
+            @Override
+            public void onClick(View view) {
+
+            }
+        });
+        map.setOnTouchListener(new IconSmallerOnTouchListener());
 
 
         send.setOnClickListener(new View.OnClickListener() {
