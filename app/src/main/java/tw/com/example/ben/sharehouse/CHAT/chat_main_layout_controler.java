@@ -22,6 +22,7 @@ import com.google.firebase.storage.UploadTask;
 
 import tw.com.example.ben.sharehouse.CHAT.dataModel.Chat;
 import tw.com.example.ben.sharehouse.CHAT.dataModel.MyUser;
+import tw.com.example.ben.sharehouse.MapsActivity;
 import tw.com.example.ben.sharehouse.R;
 import tw.com.example.ben.sharehouse.lib.TinyDB;
 import tw.com.example.ben.sharehouse.ui.IconSmallerOnTouchListener;
@@ -104,7 +105,9 @@ public class chat_main_layout_controler extends AppCompatActivity {
         map.setOnClickListener(new View.OnClickListener(){
             @Override
             public void onClick(View view) {
-
+                Intent mapM = new Intent();
+                mapM.setClass(view.getContext(), MapsActivity.class);
+                startActivity(mapM);
             }
         });
         map.setOnTouchListener(new IconSmallerOnTouchListener());
