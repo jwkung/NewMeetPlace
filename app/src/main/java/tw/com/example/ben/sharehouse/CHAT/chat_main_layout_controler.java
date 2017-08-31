@@ -18,10 +18,11 @@ import com.firebase.client.Firebase;
 import com.firebase.client.FirebaseError;
 import com.firebase.client.ValueEventListener;
 import com.google.android.gms.tasks.OnSuccessListener;
-import com.google.firebase.database.DatabaseError;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
+
+import java.util.Calendar;
 
 import tw.com.example.ben.sharehouse.CHAT.dataModel.Chat;
 import tw.com.example.ben.sharehouse.CHAT.dataModel.MyUser;
@@ -122,9 +123,19 @@ public class chat_main_layout_controler extends AppCompatActivity {
         send.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                Calendar c = Calendar.getInstance();
+                int hour = c.get(Calendar.HOUR_OF_DAY);
+                int minute = c.get(Calendar.MINUTE);
+                String time;
+                if ( minute < 10 ){
+                    time = hour +":0";
+                }
+                else{
+                    time = hour +":"+minute;
+                }
                 //sendMessage();
                 // TODO: Send messages on click
-                Chat friendlyMessage = new Chat(mMessageEditText.getText().toString(), mUsername, null);
+                Chat friendlyMessage = new Chat(mMessageEditText.getText().toString(), mUsername, null,time);
                 // Clear input box
                 mFirebaseRef.push().setValue(friendlyMessage);
                 mMessageEditText.setText("");
@@ -193,7 +204,17 @@ public class chat_main_layout_controler extends AppCompatActivity {
                 @Override
                 public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
                     @SuppressWarnings("VisibleForTests") Uri downloadUrl = taskSnapshot.getDownloadUrl();
-                    Chat friendlyMessage = new Chat(null, mUsername , downloadUrl.toString());
+                    Calendar c = Calendar.getInstance();
+                    int hour = c.get(Calendar.HOUR_OF_DAY);
+                    int minute = c.get(Calendar.MINUTE);
+                    String time;
+                    if ( minute < 10 ){
+                        time = hour +":0";
+                    }
+                    else{
+                        time = hour +":"+minute;
+                    }
+                    Chat friendlyMessage = new Chat(null, mUsername , downloadUrl.toString(),time);
                     mFirebaseRef.push().setValue(friendlyMessage);
                 }
             });

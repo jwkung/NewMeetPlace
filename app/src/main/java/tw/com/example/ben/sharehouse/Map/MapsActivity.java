@@ -69,6 +69,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 import java.util.Objects;
 
@@ -273,7 +274,7 @@ public class MapsActivity extends AppCompatActivity
                 if(!flag_chatlist){
                     View mapv = getSupportFragmentManager().findFragmentById(R.id.map).getView();
                     if (mapv != null) {
-                        mapv.setAlpha(0.3f);
+                        mapv.setAlpha(0.0f);
                     }
                     //LV.setVisibility(View.VISIBLE);
                     Log.i("onclick","y");
@@ -295,9 +296,19 @@ public class MapsActivity extends AppCompatActivity
         send.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                Calendar c = Calendar.getInstance();
+                int hour = c.get(Calendar.HOUR_OF_DAY);
+                int minute = c.get(Calendar.MINUTE);
+                String time;
+                if ( minute < 10 ){
+                    time = hour +":0";
+                }
+                else{
+                    time = hour +":"+minute;
+                }
                 //sendMessage();
                 // TODO: Send messages on click
-                Chat friendlyMessage = new Chat(mMessageEditText.getText().toString(), mUsername, null);
+                Chat friendlyMessage = new Chat(mMessageEditText.getText().toString(), mUsername, null,time);
                 // Clear input box
                 mFirebaseRef.push().setValue(friendlyMessage);
                 mMessageEditText.setText("");

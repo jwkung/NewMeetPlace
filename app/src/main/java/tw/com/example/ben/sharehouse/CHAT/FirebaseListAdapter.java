@@ -233,5 +233,6 @@ public class FirebaseListAdapter extends BaseAdapter {
     protected void populateView(View view, Chat chat) {
         ((TextView) view.findViewById(R.id.author)).setText(chat.getAuthor());
         ((TextView) view.findViewById(R.id.message)).setText(chat.getMessage());
+        ((TextView) view.findViewById(R.id.time_text)).setText(chat.getTime());
     }
 }
