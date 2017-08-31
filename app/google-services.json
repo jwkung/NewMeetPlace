@@ -15,6 +15,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "784598395613-1mgo88dag4i7ahj6bkums57bv9jo65ad.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "tw.com.example.ben.Share",
+            "certificate_hash": "8988e04cb2531f2c08fa0b2112db19a5167d418f"
+          }
+        },
+        {
           "client_id": "784598395613-jk65d3esf6d8s81n9h3thmkb4eaa2clc.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {

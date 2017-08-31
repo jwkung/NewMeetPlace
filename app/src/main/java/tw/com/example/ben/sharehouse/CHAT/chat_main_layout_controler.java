@@ -13,16 +13,19 @@ import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.ListView;
 
+import com.firebase.client.DataSnapshot;
 import com.firebase.client.Firebase;
+import com.firebase.client.FirebaseError;
 import com.firebase.client.ValueEventListener;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
 
 import tw.com.example.ben.sharehouse.CHAT.dataModel.Chat;
 import tw.com.example.ben.sharehouse.CHAT.dataModel.MyUser;
-import tw.com.example.ben.sharehouse.MapsActivity;
+import tw.com.example.ben.sharehouse.Map.MapsActivity;
 import tw.com.example.ben.sharehouse.R;
 import tw.com.example.ben.sharehouse.lib.TinyDB;
 import tw.com.example.ben.sharehouse.ui.IconSmallerOnTouchListener;
@@ -41,6 +44,7 @@ public class chat_main_layout_controler extends AppCompatActivity {
     private ImageView send ,pic ,map;
     private EditText mMessageEditText;
     ListView listView;
+    private String key;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -106,6 +110,8 @@ public class chat_main_layout_controler extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 Intent mapM = new Intent();
+                mapM.putExtra("roomkey",key);
+                mapM.putExtra("URL",FIREBASE_URL);
                 mapM.setClass(view.getContext(), MapsActivity.class);
                 startActivity(mapM);
             }
@@ -139,6 +145,21 @@ public class chat_main_layout_controler extends AppCompatActivity {
                 listView.setSelection(mChatListAdapter.getCount() - 1);
             }
         });
+
+        ValueEventListener postListener = new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                key = dataSnapshot.getKey();
+            }
+
+            @Override
+            public void onCancelled(FirebaseError firebaseError) {
+
+            }
+        };
+        mFirebaseRef.addListenerForSingleValueEvent(postListener);
+
+
     }
     private void setupUsername() {
         TinyDB tinydb;

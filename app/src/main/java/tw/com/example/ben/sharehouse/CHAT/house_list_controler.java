@@ -57,6 +57,7 @@ public class house_list_controler extends Fragment {
                 Intent goChat= new Intent(getActivity(),chat_main_layout_controler.class);
                 TextView chat = (TextView) view.findViewById(R.id.chat);
                 String Tochat = chat.getText().toString();//聊天室url
+                Log.i("uri",Tochat);
                 String name ="聊天室";
                 goChat.putExtra("網址",Tochat);
                 goChat.putExtra("名稱",name);

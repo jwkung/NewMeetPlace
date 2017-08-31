@@ -65,7 +65,7 @@
 
     <!-- blue -->
     <color name="blue_standard_bg">#27323E</color>
-    <color name="blue_ocean">#2B65EC</color>
+    <color name="blue_ocean">#2b65ec</color>
     <color name="blue_dress">#157DEC</color>
     <color name="blue_sky">#6698FF</color>
     <color name="blue_sky2">#82CAFF</color>
@@ -127,4 +127,13 @@
     <!-- Purple -->
     <color name="purple_amethyst">#6C2DC7</color>
     <color name="purple_light">#d8c8eb</color>
+    <color name="burstblue">#0099cc</color>
+    <color name="orangeb">#f0780f</color>
+    <color name="orangec">#f4c36e</color>
+    <color name="GJ">#d6ccf4f6</color>
+    <color name="bblue">#0b7bf4</color>
+    <color name="GJ_orange">#60f2cb98</color>
+    <color name="GJJOrange">#e98923</color>
+    <color name="GJ_blue">#a763a9ef</color>
+    <color name="chatroom_bk">#76d3f1fb</color>
 </resources>

@@ -16,13 +16,26 @@ import com.firebase.client.Firebase;
 import com.firebase.client.FirebaseError;
 import com.firebase.client.Query;
 import com.firebase.client.ValueEventListener;
+import com.google.android.gms.auth.api.Auth;
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
+import com.google.android.gms.auth.api.signin.GoogleSignInResult;
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
+import com.google.firebase.FirebaseApp;
+import com.google.firebase.FirebaseOptions;
+import com.google.firebase.auth.AuthCredential;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.auth.GoogleAuthProvider;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+
+import java.io.IOException;
+import java.util.List;
 
 import tw.com.example.ben.sharehouse.CHAT.dataModel.House;
 import tw.com.example.ben.sharehouse.CHAT.dataModel.MyUser;
@@ -31,7 +44,7 @@ import tw.com.example.ben.sharehouse.lib.TinyDB;
 /**
  * A login screen that offers login via email/password.
  */
-public class LoginActivity extends AppCompatActivity {
+public class LoginActivity extends AppCompatActivity implements GoogleApiClient.OnConnectionFailedListener {
 
     private FirebaseAuth auth;
     FirebaseAuth.AuthStateListener authListener;
@@ -41,6 +54,15 @@ public class LoginActivity extends AppCompatActivity {
     TinyDB tinydb;         //小型資料庫  放置使用者資料
     private Firebase mFirebaseRef;
     private int flag = 0;
+
+
+    //0819
+
+    private static final int RC_SIGN_IN = 9001;
+    private FirebaseAuth mAuth;
+    private GoogleApiClient mGoogleApiClient;
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         //主畫面初始化
@@ -76,6 +98,34 @@ public class LoginActivity extends AppCompatActivity {
             finish();
         }
         mFirebaseRef =new Firebase("https://sharehousetest.firebaseio.com/users");
+
+
+        //0819
+
+        GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                .requestIdToken(getString(R.string.default_web_client_id))
+                .requestEmail()
+                .build();
+
+        mGoogleApiClient = new GoogleApiClient.Builder(this)
+                .enableAutoManage(this /* FragmentActivity */,this /* OnConnectionFailedListener */)
+                .addApi(Auth.GOOGLE_SIGN_IN_API, gso)
+                .build();
+
+        // [START initialize_auth]
+        mAuth = FirebaseAuth.getInstance();
+        FirebaseOptions options = new FirebaseOptions.Builder()
+                .setApplicationId("1:619884211704:android:abb1b0f52ccf9be0") // Required for Analytics.
+                .setApiKey("AIzaSyCMhKyLw45vlPOEJApRDKHt3rPFFQ9DDaY") // Required for Auth.
+                .setDatabaseUrl("https://meetplacemap.firebaseio.com/") // Required for RTDB.
+                .build();
+        try{
+            FirebaseApp.initializeApp(this /* Context */, options, "MapRtDb");}
+        catch(Exception e){
+                Log.i("initial failed","failed");
+
+           }
+
     }
 
     @Override
@@ -182,7 +232,67 @@ public class LoginActivity extends AppCompatActivity {
         //新增使用者資料增加到本地資料庫中
         TinyDB tinydb = new TinyDB(this);
         tinydb.putObject("MyUser",myUser);
+
+
     }
+
+    @Override
+    public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
+    }
+
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        // Result returned from launching the Intent from GoogleSignInApi.getSignInIntent(...);
+        if (requestCode == RC_SIGN_IN) {
+            GoogleSignInResult result = Auth.GoogleSignInApi.getSignInResultFromIntent(data);
+            if (result.isSuccess()) {
+                // Google Sign In was successful, authenticate with Firebase
+                GoogleSignInAccount account = result.getSignInAccount();
+                firebaseAuthWithGoogle(account);
+            } else {
+                Log.d("Activtyres", "失敗");
+            }
+        }
+    }
+    // [END onactivityresult]
+
+    // [START auth_with_google]
+    private void firebaseAuthWithGoogle(GoogleSignInAccount acct) {
+
+        AuthCredential credential = GoogleAuthProvider.getCredential(acct.getIdToken(), null);
+        mAuth.signInWithCredential(credential)
+                .addOnCompleteListener(this, new OnCompleteListener<AuthResult>() {
+                    @Override
+                    public void onComplete(@NonNull Task<AuthResult> task) {
+                        if (task.isSuccessful()) {
+                            Log.d("onComplete", "登入成功");
+                            // Sign in success, update UI with the signed-in user's information
+                            //帳號預設為信箱
+                            account =mAuth.getCurrentUser().getEmail() ;
+                            addContact();
+                            //登陸成功
+                            startActivity(mainActivity);
+                            //登陸畫面結束
+                            finish();
+                        } else {
+                            // If sign in fails, display a message to the user.
+                            Log.d("onComplete", "登入失敗");
+
+                                                   }
+                    }
+                });
+        FirebaseApp app = FirebaseApp.getInstance("MapRtDb");
+        FirebaseAuth.getInstance(app).signInWithCredential(credential);
+    }
+    // [END auth_with_google]
+
+    // [START signin]
+    public void login_g(View v) {
+        Intent signInIntent = Auth.GoogleSignInApi.getSignInIntent(mGoogleApiClient);
+        startActivityForResult(signInIntent, RC_SIGN_IN);
+    }    // [END signin]
+
 
   /*  private void updateContact(){
         FirebaseDatabase db = FirebaseDatabase.getInstance();
