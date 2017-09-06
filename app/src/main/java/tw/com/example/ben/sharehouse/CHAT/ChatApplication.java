@@ -12,6 +12,7 @@ public class ChatApplication extends android.app.Application {
 
     private String KEY_TWO;             // delete house
     private String KEY_THREE;
+    private String Change_House_Name;
     private int Flag_D;
 
     @Override
@@ -31,4 +32,7 @@ public class ChatApplication extends android.app.Application {
 
     public void setKEY_THREE(String KEY) { this.KEY_THREE = KEY; }
     public String getKEY_THREE(){ return this.KEY_THREE ; }
+
+    public void setChange_House_Name(String name) {this.Change_House_Name = name;}
+    public String getChange_House_Name(){ return this.Change_House_Name;}
 }

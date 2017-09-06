@@ -301,7 +301,7 @@ public class MapsActivity extends AppCompatActivity
                 int minute = c.get(Calendar.MINUTE);
                 String time;
                 if ( minute < 10 ){
-                    time = hour +":0";
+                    time = hour +":0"+minute;
                 }
                 else{
                     time = hour +":"+minute;

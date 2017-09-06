@@ -128,7 +128,7 @@ public class chat_main_layout_controler extends AppCompatActivity {
                 int minute = c.get(Calendar.MINUTE);
                 String time;
                 if ( minute < 10 ){
-                    time = hour +":0";
+                    time = hour +":0"+minute;
                 }
                 else{
                     time = hour +":"+minute;
@@ -209,7 +209,7 @@ public class chat_main_layout_controler extends AppCompatActivity {
                     int minute = c.get(Calendar.MINUTE);
                     String time;
                     if ( minute < 10 ){
-                        time = hour +":0";
+                        time = hour +":0"+minute;
                     }
                     else{
                         time = hour +":"+minute;

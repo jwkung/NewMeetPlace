@@ -5,6 +5,7 @@ import android.app.Fragment;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.design.widget.FloatingActionButton;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -162,6 +163,39 @@ public class house_list_controler extends Fragment {
                        }
                        else if(which == 0)
                        {
+                           TextView chat = (TextView) view.findViewById(R.id.chat);
+                           String Key = chat.getText().toString();
+                           FirebaseDatabase db = FirebaseDatabase.getInstance();
+                           final DatabaseReference Ref= db.getReference();
+                           Query deleteQuery = Ref.child("houses").orderByChild("chat").equalTo(Key);
+                           deleteQuery.addChildEventListener(new ChildEventListener() {
+                               @Override
+                               public void onChildAdded(DataSnapshot dataSnapshot, String s) {
+                                   if (dataSnapshot.exists()){
+                                       GV.setChange_House_Name(dataSnapshot.getRef().toString());
+                                   }
+                               }
+
+                               @Override
+                               public void onChildChanged(DataSnapshot dataSnapshot, String s) {
+
+                               }
+
+                               @Override
+                               public void onChildRemoved(DataSnapshot dataSnapshot) {
+
+                               }
+
+                               @Override
+                               public void onChildMoved(DataSnapshot dataSnapshot, String s) {
+
+                               }
+
+                               @Override
+                               public void onCancelled(DatabaseError databaseError) {
+
+                               }
+                           });
                            startActivity(new Intent(getActivity(),edit_house.class));
                        }
                        Toast.makeText(getActivity(), "你選的是" + dinner[which], Toast.LENGTH_SHORT).show();
@@ -193,6 +227,14 @@ public class house_list_controler extends Fragment {
                 ref.setValue(house2);
             }
         });
+
+        new Handler().postDelayed(new Runnable() {
+            @Override
+            public void run() {
+
+            }
+        },1000);
+
         return view;
     }
     @Override
