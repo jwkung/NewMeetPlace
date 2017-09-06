@@ -5,7 +5,6 @@ import android.app.Fragment;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
-import android.os.Handler;
 import android.support.design.widget.FloatingActionButton;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -227,13 +226,6 @@ public class house_list_controler extends Fragment {
                 ref.setValue(house2);
             }
         });
-
-        new Handler().postDelayed(new Runnable() {
-            @Override
-            public void run() {
-
-            }
-        },1000);
 
         return view;
     }
