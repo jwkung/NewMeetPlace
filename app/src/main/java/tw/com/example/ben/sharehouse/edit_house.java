@@ -14,7 +14,7 @@ import tw.com.example.ben.sharehouse.CHAT.dataModel.House;
 
 public class edit_house extends AppCompatActivity {
     House house;
-    private DatabaseReference mDatabase;g
+    private DatabaseReference mDatabase;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
