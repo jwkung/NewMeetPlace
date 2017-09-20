@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.DataSetObserver;
 import android.location.Location;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.LayoutRes;
@@ -50,6 +51,7 @@ import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -59,6 +61,9 @@ import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageReference;
+import com.google.firebase.storage.UploadTask;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -86,7 +91,8 @@ import static android.os.SystemClock.sleep;
 public class MapsActivity extends AppCompatActivity
         implements OnMapReadyCallback,GoogleMap.OnMarkerDragListener,GoogleMap.OnMarkerClickListener,
         GoogleApiClient.ConnectionCallbacks,
-        GoogleApiClient.OnConnectionFailedListener, com.google.android.gms.location.LocationListener {
+        GoogleApiClient.OnConnectionFailedListener, com.google.android.gms.location.LocationListener,
+        GoogleMap.OnInfoWindowClickListener,GoogleMap.OnCameraIdleListener,GoogleMap.OnInfoWindowLongClickListener {
 
     private static final String TAG = MapsActivity.class.getSimpleName();
     private GoogleMap mMap;
@@ -97,14 +103,14 @@ public class MapsActivity extends AppCompatActivity
 
     // A default location (Sydney, Australia) and default zoom to use when location permission is
     // not granted.
-    private final LatLng mDefaultLocation = new LatLng(-33.8523341, 151.2106085);
-    private static final int DEFAULT_ZOOM = 15;
+    private final LatLng mDefaultLocation = new LatLng(-33.8523341, 151.2106085);//預設位置，偵測不到使用者位置時使用。
+    private static final int DEFAULT_ZOOM = 15;//預設地圖Scale
     private static final int PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 1;
     private boolean mLocationPermissionGranted;
 
     // The geographical location where the device is currently located. That is, the last-known
     // location retrieved by the Fused Location Provider.
-    private Location mLastKnownLocation;
+    private Location mLastKnownLocation;//使用者目前位置
 
     // Keys for storing activity state.
     private static final String KEY_CAMERA_POSITION = "camera_position";
@@ -131,7 +137,7 @@ public class MapsActivity extends AppCompatActivity
     Toolbar toolbar;
     FirebaseUser currentUser;
     //0811
-    int locreqflag;
+    int locreqflag;//是否同步自身位置
     //0814
     private Marker[] placeMarkers;
     private MarkerOptions[] places;
@@ -144,7 +150,7 @@ public class MapsActivity extends AppCompatActivity
     private DatabaseReference NearplaceReference;
     private FirebaseDatabase MapDatabase;
     //0820
-    private ImageView send ,addusrmkr ,chat;
+    private ImageView send ,addpic ,chat;
     //0822
     private NavigationView NVr;
     private int NVrmenupage;
@@ -161,7 +167,22 @@ public class MapsActivity extends AppCompatActivity
     //0829
     public  List<String> placetype;
     private String finplacetype;
+    //0904
+    private DatabaseReference CenterpointReference;
+    //0913
+    private DatabaseReference ManagerReferenece;
+    public Boolean isManager,isfollowmode;
+    private ValueEventListener mManagerValueEventListener;
+    private int nearplacenum;
+    int MAX_PLACES = 60;
+    //0918
+    private ChildEventListener mNearPlaceChildEventListener;
+    private static final int RC_PHOTO_PICKER = 2 ;
+    private StorageReference mChatPhotosStorageReferenece;
+    private FirebaseStorage mFirebaseStorage;
 
+
+    // TODO: OnCreate
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -199,6 +220,8 @@ public class MapsActivity extends AppCompatActivity
         setupUsername();
         mFirebaseRef = new Firebase(FIREBASE_URL);
         mMessageEditText = (EditText) findViewById( R.id.messageInput) ;
+        isfollowmode = false;
+        isManager = false;
         if(currentUser==null ){
             Intent intent = new Intent();
             intent.setClass(MapsActivity.this, LoginActivity.class);
@@ -216,11 +239,35 @@ public class MapsActivity extends AppCompatActivity
             mUMkrReference = MapDatabase.getReference().child(Chatroom_Key).child("Umarker");
             UmarkerList = new ArrayList<>();
 
-           FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.addmkr);
+            FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.btn_rightdrawer);
+            FloatingActionButton fab_addusrmkr = (FloatingActionButton) findViewById(R.id.addusermkr);
             fab.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     DL.openDrawer(GravityCompat.END);
+                }
+
+            });
+            fab_addusrmkr.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if (UMkrNumLimit > 0) {
+                        // [START_EXCLUDE]
+                        final double[] CameraLat = new double[1];
+                        final double[] CameraLon = new double[1];
+                        mMap.setOnMapLoadedCallback(new GoogleMap.OnMapLoadedCallback() {
+                            @Override
+                            public void onMapLoaded() {
+                                CameraLat[0] = mMap.getCameraPosition().target.latitude;
+                                CameraLon[0] = mMap.getCameraPosition().target.longitude;
+                                submitUmkrlocation(Double.toString(CameraLat[0]), Double.toString(CameraLon[0]));
+                            }
+                        });
+
+                    }
+                    else{
+                        Toast.makeText(MapsActivity.this, "標記已達上限，無法再增加!", Toast.LENGTH_LONG).show();
+                    }
                 }
 
             });
@@ -230,51 +277,48 @@ public class MapsActivity extends AppCompatActivity
             toolbar.setTitle(TollBarTitle[0]);//设置主標题
             locreqflag = 1;
             //0814
-            int MAX_PLACES = 60;
+
             placeMarkers = new Marker[MAX_PLACES];
             //0815
             nearradius = 300;
             NearplaceReference = MapDatabase.getReference().child(Chatroom_Key).child("Nearplace");
+            ManagerReferenece = MapDatabase.getReference().child(Chatroom_Key).child("Manager");
             //0826
+            check_manager();
             set_map_member_loc();
             set_map_customize_mkr();
+            set_manager();
+            set_usersetting();
+            set_nearplace_mkr();
+            //0904
+            CenterpointReference = MapDatabase.getReference().child(Chatroom_Key).child("CenterPoint");
+            mFirebaseStorage = FirebaseStorage.getInstance();
+            mChatPhotosStorageReferenece = mFirebaseStorage.getReference().child("chat_photos");
+
 
         }
         //0820
         send = (ImageView) findViewById(R.id.sendButton);
-        addusrmkr = (ImageView) findViewById( R.id.addusrmkr);
+        addpic = (ImageView) findViewById( R.id.pic);
         chat = (ImageView) findViewById( R.id.chatB);
         //0821
-        addusrmkr.setOnClickListener(new View.OnClickListener(){
+        addpic.setOnClickListener(new View.OnClickListener(){
             @Override
             public void onClick(View view) {
-                if (UMkrNumLimit > 0) {
-                    // [START_EXCLUDE]
-                    final double[] CameraLat = new double[1];
-                    final double[] CameraLon = new double[1];
-                    mMap.setOnMapLoadedCallback(new GoogleMap.OnMapLoadedCallback() {
-                        @Override
-                        public void onMapLoaded() {
-                            CameraLat[0] = mMap.getCameraPosition().target.latitude;
-                            CameraLon[0] = mMap.getCameraPosition().target.longitude;
-                            submitUmkrlocation(Double.toString(CameraLat[0]), Double.toString(CameraLon[0]));
-                        }
-                    });
-
-                }
-                else{
-                    Toast.makeText(MapsActivity.this, "標記已達上限，無法再增加!", Toast.LENGTH_LONG).show();
-                }
+                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+                intent.setType("image/jpeg");
+                intent.putExtra(Intent.EXTRA_LOCAL_ONLY, true);
+                startActivityForResult(Intent.createChooser(intent, "Complete action using"), RC_PHOTO_PICKER);
             }
         });
-        addusrmkr.setOnTouchListener(new IconSmallerOnTouchListener());
+        addpic.setOnTouchListener(new IconSmallerOnTouchListener());
 
         chat.setOnClickListener(new View.OnClickListener(){
             public void onClick(View v){
                 if(!flag_chatlist){
                     View mapv = getSupportFragmentManager().findFragmentById(R.id.map).getView();
                     if (mapv != null) {
-                        mapv.setAlpha(0.0f);
+                        mapv.setAlpha(0.3f);
                     }
                     //LV.setVisibility(View.VISIBLE);
                     Log.i("onclick","y");
@@ -301,7 +345,7 @@ public class MapsActivity extends AppCompatActivity
                 int minute = c.get(Calendar.MINUTE);
                 String time;
                 if ( minute < 10 ){
-                    time = hour +":0"+minute;
+                    time = hour +":0";
                 }
                 else{
                     time = hour +":"+minute;
@@ -338,6 +382,8 @@ public class MapsActivity extends AppCompatActivity
 
     }
 
+
+
     /**
      * Saves the state of the map when the activity is paused.
      */
@@ -348,6 +394,10 @@ public class MapsActivity extends AppCompatActivity
             outState.putParcelable(KEY_LOCATION, mLastKnownLocation);
             super.onSaveInstanceState(outState);
         }
+    }
+    public void onPause(){
+        super.onPause();
+
     }
 
     /**
@@ -395,6 +445,7 @@ public class MapsActivity extends AppCompatActivity
      * Manipulates the map when it's available.
      * This callback is triggered when the map is ready to be used.
      */
+    // TODO: OnMapReady
     @Override
     public void onMapReady(GoogleMap map) {
         mMap = map;
@@ -406,13 +457,8 @@ public class MapsActivity extends AppCompatActivity
 
             @Override
             // Return null here, so that getInfoContents() is called next.
-            public View getInfoWindow(Marker arg0) {
-                return null;
-            }
-
-            @Override
-            public View getInfoContents(Marker marker) {
-                // Inflate the layouts for the info window, title and snippet.
+            public View getInfoWindow(Marker marker)
+            {
                 View infoWindow = getLayoutInflater().inflate(R.layout.custom_info_contents,
                         (FrameLayout)findViewById(R.id.map), false);
 
@@ -423,6 +469,13 @@ public class MapsActivity extends AppCompatActivity
                 snippet.setText(marker.getSnippet());
 
                 return infoWindow;
+
+            }
+
+            @Override
+            public View getInfoContents(Marker marker) {
+                // Inflate the layouts for the info window, title and snippet.
+                return null;
             }
 
         });
@@ -435,222 +488,26 @@ public class MapsActivity extends AppCompatActivity
         //0730
         mMap.setOnMarkerDragListener(this);
         mMap.setOnMarkerClickListener(this);
-
+        mMap.setOnInfoWindowClickListener(this);
+        mMap.setOnInfoWindowLongClickListener(this);
+        mMap.setOnCameraIdleListener(this);
+        //mMap.setOnCameraMoveStartedListener(this);
+       // mMap.setOnCameraMoveListener(this);
+        //mMap.setOnCameraMoveCanceledListener(this);
 
     }
-
-    /**
-     * Gets the current location of the device, and positions the map's camera.
-     */
-    private void getDeviceLocation() {
-        /*
-         * Request location permission, so that we can get the location of the
-         * device. The result of the permission request is handled by a callback,
-         * onRequestPermissionsResult.
-         */
-        if (ContextCompat.checkSelfPermission(this.getApplicationContext(),
-                android.Manifest.permission.ACCESS_FINE_LOCATION)
-                == PackageManager.PERMISSION_GRANTED) {
-            mLocationPermissionGranted = true;
-        } else {
-            ActivityCompat.requestPermissions(this,
-                    new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION},
-                    PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION);
-        }
-        /*
-         * Get the best and most recent location of the device, which may be null in rare
-         * cases when a location is not available.
-         */
-        if (mLocationPermissionGranted) {
-            mLastKnownLocation = LocationServices.FusedLocationApi
-                    .getLastLocation(mGoogleApiClient);
-
-            submitlocation(mLastKnownLocation);
-        }
-
-        // Set the map's camera position to the current location of the device.
-        if (mCameraPosition != null) {
-            mMap.moveCamera(CameraUpdateFactory.newCameraPosition(mCameraPosition));
-        } else if (mLastKnownLocation != null) {
-            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
-                    new LatLng(mLastKnownLocation.getLatitude(),
-                            mLastKnownLocation.getLongitude()), DEFAULT_ZOOM));
-        } else {
-            Log.d(TAG, "Current location is null. Using defaults.");
-            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(mDefaultLocation, DEFAULT_ZOOM));
-            mMap.getUiSettings().setMyLocationButtonEnabled(false);
-        }
-    }
-
-    /**
-     * Handles the result of the request for location permissions.
-     */
     @Override
-    public void onRequestPermissionsResult(int requestCode,
-                                           @NonNull String permissions[],
-                                           @NonNull int[] grantResults) {
-        mLocationPermissionGranted = false;
-        switch (requestCode) {
-            case PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION: {
-                // If request is cancelled, the result arrays are empty.
-                if (grantResults.length > 0
-                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    mLocationPermissionGranted = true;
-                }
-            }
-        }
-        updateLocationUI();
-    }
-
-    /**
-     * Updates the map's UI settings based on whether the user has granted location permission.
-     */
-    private void updateLocationUI() {
-        if (mMap == null) {
+    public void onInfoWindowClick(final Marker marker) {
+        if(marker.getTag() == "nearplace")
             return;
-        }
-
-        /*
-         * Request location permission, so that we can get the location of the
-         * device. The result of the permission request is handled by a callback,
-         * onRequestPermissionsResult.
-         */
-        if (ContextCompat.checkSelfPermission(this.getApplicationContext(),
-                android.Manifest.permission.ACCESS_FINE_LOCATION)
-                == PackageManager.PERMISSION_GRANTED) {
-            mLocationPermissionGranted = true;
-        } else {
-            ActivityCompat.requestPermissions(this,
-                    new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION},
-                    PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION);
-        }
-
-        if (mLocationPermissionGranted) {
-            mMap.setMyLocationEnabled(true);
-            mMap.getUiSettings().setMyLocationButtonEnabled(true);
-        } else {
-            mMap.setMyLocationEnabled(false);
-            mMap.getUiSettings().setMyLocationButtonEnabled(false);
-            mLastKnownLocation = null;
-        }
-    }
-    //0723
-    public void submitlocation(Location L) {
-        if(currentUser!=null){
-            String userId = getUid();
-            String useremail = getEmail();
-            User user = new User(useremail,Double.toString(L.getLatitude()),Double.toString(L.getLongitude()) );
-            mLocReference.child(userId).setValue(user);
-        }
-    }
-    public String getUid() {
-        return currentUser.getUid();
-    }
-    public String getEmail() {
-        return currentUser.getEmail();
-    }
-    @Override
-    public void onStart() {
-        super.onStart();
-    }
-
-    public void onDestroy(){
-        super.onDestroy();
-       if (mChildEventListener != null) {
-            mLocReference.removeEventListener(mChildEventListener);
-        }
-        if(markersList!=null){
-            for(int pm=0; pm<markersList.size(); pm++){
-                if(markersList.get(pm) !=null)
-                    markersList.get(pm).remove();
-            }
-        }
-       if(mUMkraddChildEventListener!=null){
-            mUMkrReference.removeEventListener(mUMkraddChildEventListener);
-        }
-        if(UmarkerList!=null){
-            for(int pm=0; pm<UmarkerList.size(); pm++){
-                if(UmarkerList.get(pm) !=null)
-                    UmarkerList.get(pm).remove();
-            }
-        }
-        if(chatmember!=null){
-            for(int pm=0; pm<chatmember.size(); pm++){
-                if(chatmember.get(pm) !=null){
-                    chatmember.remove(pm);
-                }
-            }
-        }
-
-    }
-
-    public void onStop() {
-        super.onStop();
-    }
-
-    public void onPause() {
-        super.onPause();
-    }
-    public void onResume(){
-        super.onResume();
-    }
-
-    //0725
-    @Override
-    public void onLocationChanged(Location l) {
-        if(locreqflag == 1){
-            submitlocation(l);
-        }
-    }
-    //0729
-    private void submitUmkrlocation(String Le , String Lo ){
-        String t = "Drag Marker";
-        String e = getEmail();
-        UserMkr umkr = new UserMkr(Le,Lo,t,e);
-        mUMkrReference.push().setValue(umkr);
-    }
-    //0730
-    @Override
-    public void onMarkerDragStart(Marker marker) {
-
+        centerpoint = new LatLng(marker.getPosition().latitude,marker.getPosition().longitude);
+        finplacetype = null;//reset finplacetype
+        placetype.clear();//reset placetype
+        getPlaceTypeSelected();
     }
 
     @Override
-    public void onMarkerDrag(Marker marker) {
-
-    }
-
-    @Override
-    public void onMarkerDragEnd(Marker marker) {
-        final LatLng L =marker.getPosition();
-        final Marker m =marker;
-        final String key = (String) marker.getTag();
-        ValueEventListener postListener = new ValueEventListener() {
-            @Override
-            public void onDataChange(DataSnapshot dataSnapshot) {
-                UserMkr usermkr = dataSnapshot.getValue(UserMkr.class);
-                UserMkr umkr ;
-                if (usermkr != null && key != null) {
-                    umkr = new UserMkr(Double.toString(L.latitude),Double.toString(L.longitude),m.getTitle(), usermkr.Email);
-                    mUMkrReference.child(key).setValue(umkr);
-                }
-            }
-
-            @Override
-            public void onCancelled(DatabaseError databaseError) {
-                // Getting Post failed, log a message
-                // ...
-            }
-        };
-        if (key != null) {
-            mUMkrReference.child(key).addListenerForSingleValueEvent(postListener);
-        }
-
-    }
-    //0804
-    @Override
-    public boolean onMarkerClick(final Marker marker) {
-
+    public void onInfoWindowLongClick(final Marker marker) {
         int size=UmarkerList.size();
         int flag=0;
         for(int m=0 ; m < size; ++m) {
@@ -664,7 +521,7 @@ public class MapsActivity extends AppCompatActivity
                 }
         }
         if(flag == 0){
-            return false;
+            return ;
         }
         String t = marker.getTitle();
         final LatLng L = marker.getPosition();
@@ -757,13 +614,233 @@ public class MapsActivity extends AppCompatActivity
                     }
                 })
                 .show();
+    }
+
+    /**
+     * Gets the current location of the device, and positions the map's camera.
+     */
+    // TODO: GetDeviceLocation
+    private void getDeviceLocation() {
+        /*
+         * Request location permission, so that we can get the location of the
+         * device. The result of the permission request is handled by a callback,
+         * onRequestPermissionsResult.
+         */
+        if (ContextCompat.checkSelfPermission(this.getApplicationContext(),
+                android.Manifest.permission.ACCESS_FINE_LOCATION)
+                == PackageManager.PERMISSION_GRANTED) {
+            mLocationPermissionGranted = true;
+        } else {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION},
+                    PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION);
+        }
+        /*
+         * Get the best and most recent location of the device, which may be null in rare
+         * cases when a location is not available.
+         */
+        if (mLocationPermissionGranted) {
+            mLastKnownLocation = LocationServices.FusedLocationApi
+                    .getLastLocation(mGoogleApiClient);
+
+            submitlocation(mLastKnownLocation);
+        }
+
+        // Set the map's camera position to the current location of the device.
+        if (mCameraPosition != null) {
+            mMap.moveCamera(CameraUpdateFactory.newCameraPosition(mCameraPosition));
+        } else if (mLastKnownLocation != null) {
+            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
+                    new LatLng(mLastKnownLocation.getLatitude(),
+                            mLastKnownLocation.getLongitude()), DEFAULT_ZOOM));
+        } else {
+            Log.d(TAG, "Current location is null. Using defaults.");
+            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(mDefaultLocation, DEFAULT_ZOOM));
+            mMap.getUiSettings().setMyLocationButtonEnabled(false);
+        }
+    }
+
+    /**
+     * Handles the result of the request for location permissions.
+     */
+    @Override
+    public void onRequestPermissionsResult(int requestCode,
+                                           @NonNull String permissions[],
+                                           @NonNull int[] grantResults) {
+        mLocationPermissionGranted = false;
+        switch (requestCode) {
+            case PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION: {
+                // If request is cancelled, the result arrays are empty.
+                if (grantResults.length > 0
+                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    mLocationPermissionGranted = true;
+                }
+            }
+        }
+        updateLocationUI();
+    }
+
+    /**
+     * Updates the map's UI settings based on whether the user has granted location permission.
+     */
+    private void updateLocationUI() {
+        if (mMap == null) {
+            return;
+        }
+
+        /*
+         * Request location permission, so that we can get the location of the
+         * device. The result of the permission request is handled by a callback,
+         * onRequestPermissionsResult.
+         */
+        if (ContextCompat.checkSelfPermission(this.getApplicationContext(),
+                android.Manifest.permission.ACCESS_FINE_LOCATION)
+                == PackageManager.PERMISSION_GRANTED) {
+            mLocationPermissionGranted = true;
+        } else {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION},
+                    PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION);
+        }
+
+        if (mLocationPermissionGranted) {
+            mMap.setMyLocationEnabled(true);
+            mMap.getUiSettings().setMyLocationButtonEnabled(true);
+            mMap.getUiSettings().setCompassEnabled(true);
+        } else {
+            mMap.setMyLocationEnabled(false);
+            mMap.getUiSettings().setMyLocationButtonEnabled(false);
+            mMap.getUiSettings().setCompassEnabled(false);
+            mLastKnownLocation = null;
+        }
+    }
+    //0723
+    public void submitlocation(Location L) {
+        if(currentUser!=null){
+            String userId = getUid();
+            String useremail = getEmail();
+            User user = new User(useremail,Double.toString(L.getLatitude()),Double.toString(L.getLongitude()) );
+            mLocReference.child(userId).setValue(user);
+        }
+    }
+    public String getUid() {
+        return currentUser.getUid();
+    }
+    public String getEmail() {
+        return currentUser.getEmail();
+    }
+    @Override
+    public void onStart() {
+        super.onStart();
+    }
+
+
+    public void onDestroy(){
+        super.onDestroy();
+        if (mChildEventListener != null) {
+            mLocReference.removeEventListener(mChildEventListener);
+        }
+        if(markersList!=null){
+            for(int pm=0; pm<markersList.size(); pm++){
+                if(markersList.get(pm) !=null)
+                    markersList.get(pm).remove();
+            }
+        }
+        if(mUMkraddChildEventListener!=null){
+            mUMkrReference.removeEventListener(mUMkraddChildEventListener);
+        }
+        if(UmarkerList!=null){
+            for(int pm=0; pm<UmarkerList.size(); pm++){
+                if(UmarkerList.get(pm) !=null)
+                    UmarkerList.get(pm).remove();
+            }
+        }
+        if(chatmember!=null){
+            for(int pm=0; pm<chatmember.size(); pm++){
+                if(chatmember.get(pm) !=null){
+                    chatmember.remove(pm);
+                }
+            }
+        }
+        if(mManagerValueEventListener!=null){
+            ManagerReferenece.removeEventListener(mManagerValueEventListener);
+        }
+        if( mNearPlaceChildEventListener != null){
+            NearplaceReference.removeEventListener(mNearPlaceChildEventListener);
+        }
+
+    }
+
+    public void onStop() {
+        super.onStop();
+    }
+
+
+    public void onResume(){super.onResume();}
+
+    //0725
+    @Override
+    public void onLocationChanged(Location l) {
+        if(locreqflag == 1){
+            submitlocation(l);
+        }
+    }
+    //0729
+    private void submitUmkrlocation(String Le , String Lo ){
+        String t = "Drag Marker";
+        String e = getEmail();
+        UserMkr umkr = new UserMkr(Le,Lo,t,e);
+        mUMkrReference.push().setValue(umkr);
+    }
+    // TODO: Marker Drag
+    //0730
+    @Override
+    public void onMarkerDragStart(Marker marker) {
+
+    }
+
+    @Override
+    public void onMarkerDrag(Marker marker) {
+
+    }
+
+    @Override
+    public void onMarkerDragEnd(Marker marker) {
+        final LatLng L =marker.getPosition();
+        final Marker m =marker;
+        final String key = (String) marker.getTag();
+        ValueEventListener postListener = new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                UserMkr usermkr = dataSnapshot.getValue(UserMkr.class);
+                UserMkr umkr ;
+                if (usermkr != null && key != null) {
+                    umkr = new UserMkr(Double.toString(L.latitude),Double.toString(L.longitude),m.getTitle(), usermkr.Email);
+                    mUMkrReference.child(key).setValue(umkr);
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                // Getting Post failed, log a message
+                // ...
+            }
+        };
+        if (key != null) {
+            mUMkrReference.child(key).addListenerForSingleValueEvent(postListener);
+        }
+
+    }
+    //0804
+    @Override
+    public boolean onMarkerClick(final Marker marker) {
 
         return false;
     }
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_navigation,menu);
+       // getMenuInflater().inflate(R.menu.menu_navigation,menu);
         return true;
     }
 
@@ -780,7 +857,7 @@ public class MapsActivity extends AppCompatActivity
         setUpNavigation();
         setUpNpitem();
     }
-
+    // TODO: nv_menu setting
     private void setUpNavigation() {
         // Set navigation item selected listener
         NV.setNavigationItemSelectedListener(new NavigationView.OnNavigationItemSelectedListener() {
@@ -788,13 +865,7 @@ public class MapsActivity extends AppCompatActivity
             public boolean onNavigationItemSelected(@NonNull MenuItem menuItem) {
                 switch (menuItem.getItemId()) {
                     case R.id.getcenterpoint:
-                        NVr.getMenu().clear();
-                        NVrmenupage = 2;
-                        finplacetype = null;
-                        placetype.clear();
-                        getPlaceTypeSelected();
-                        page = 1;
-                        nearradius = 300 ;
+                        getcenterpoint();
                         DL.closeDrawer(GravityCompat.START);
                         break;
 
@@ -805,30 +876,45 @@ public class MapsActivity extends AppCompatActivity
                         DL.closeDrawer(GravityCompat.START);
                         break;
                     case R.id.navRealtimeLoc_Switch:
-                        new AlertDialog.Builder(MapsActivity.this)
-                                .setTitle(R.string.RealtimeLoc_Switch)
-                                .setCancelable(true)
-                                .setPositiveButton(R.string.close_realtime_access, new DialogInterface.OnClickListener() {
-                                    @Override
-                                    public void onClick(DialogInterface dialog, int which){
-                                        if (mChildEventListener != null) {
-                                            mLocReference.removeEventListener(mChildEventListener);
-                                            locreqflag = -1;
-                                        }
-                                    }
-                                })
-                                .setNegativeButton(R.string.open_realtime_access,new DialogInterface.OnClickListener(){
-                                    @Override
-                                    public void onClick(DialogInterface dialog, int which) {
-                                        mLocReference.addChildEventListener(mChildEventListener);
-                                        locreqflag = 1;
-                                    }
-                                })
+                        if(locreqflag == 1){
+                            locreqflag = -1;
+                            change_usersetting(false);
+                            Menu m = NV.getMenu();
+                            MenuItem item = m.findItem(R.id.navRealtimeLoc_Switch);
+                            item.setTitle(R.string.open_realtime_access);
+                            Log.i("locreqflag",String.valueOf(locreqflag));
 
-                                .show();
+                        }
+                        else{
+                            locreqflag = 1;
+                            change_usersetting(true);
+                            Menu m = NV.getMenu();
+                            MenuItem item = m.findItem(R.id.navRealtimeLoc_Switch);
+                            item.setTitle(R.string.close_realtime_access);
+                            Log.i("locreqflag",String.valueOf(locreqflag));
+                        }
+
+
+
+
+
                         DL.closeDrawer(GravityCompat.START);
                         break;
-
+                    case R.id.followmode:
+                        if(!isfollowmode){
+                            isfollowmode = true;
+                            Menu m = NV.getMenu();
+                            MenuItem item = m.findItem(R.id.followmode);
+                            item.setTitle(R.string.closefollowmode);
+                        }
+                        else{
+                            isfollowmode = false;
+                            Menu m = NV.getMenu();
+                            MenuItem item = m.findItem(R.id.followmode);
+                            item.setTitle(R.string.followmode);
+                        }
+                        DL.closeDrawer(GravityCompat.START);
+                        break;
                     case R.id.navItemAbout:
                            /* Intent intent2 = new Intent();
                             intent2.setClass(Navigation_BaseActivity.this, About.class);
@@ -900,7 +986,7 @@ public class MapsActivity extends AppCompatActivity
         DL.addDrawerListener(actionBarDrawerToggle);
         actionBarDrawerToggle.syncState();
     }
-
+    // TODO: Nearplace setting
     //0811
     private String getDirectionsUrl(LatLng centerpoint,String radius){
 
@@ -919,6 +1005,27 @@ public class MapsActivity extends AppCompatActivity
                 "pagetoken="+nxt+
                 "&key=AIzaSyAwcdfH7kgP5AJwS2NZdvDyot7TLnLh-A8";
     }
+
+    @Override
+    public void onCameraIdle() {
+        Log.i("idle","idle");
+        if(isManager){
+            final double[] CameraLat = new double[1];
+            final double[] CameraLon = new double[1];
+            final double[] CameraZoom = new double[1];
+            mMap.setOnMapLoadedCallback(new GoogleMap.OnMapLoadedCallback() {
+                @Override
+                public void onMapLoaded() {
+                    CameraLat[0] = mMap.getCameraPosition().target.latitude;
+                    CameraLon[0] = mMap.getCameraPosition().target.longitude;
+                    CameraZoom[0] = mMap.getCameraPosition().zoom;
+                    Manager m = new Manager(getEmail(),Double.toString(CameraLat[0]),Double.toString(CameraLon[0]),Double.toString(CameraZoom[0]));
+                    ManagerReferenece.setValue(m);
+                }
+            });
+        }
+    }
+
 
 
     private class TransTask extends AsyncTask<String, Void, String>{
@@ -945,16 +1052,20 @@ public class MapsActivity extends AppCompatActivity
         protected void onPostExecute(String s) {
             super.onPostExecute(s);
             //Log.d("JSON", s);
-            parseJSON(s,page,nearradius);
-            if(nearradius>=1200){
-                if(places.length < 1){
+            parseJSON(s);
+            if(nearradius>=1000 && page == 1 && places.length<10){
+                nearradius += 1000;
+                String url = getDirectionsUrl(centerpoint, Integer.toString(nearradius));
+                new TransTask().execute(url);
+                return;
+                /*if(places.length < 1){
                     Toast.makeText(MapsActivity.this, "中心點附近無相關地點，請重新查詢", Toast.LENGTH_LONG).show();
-                }
+                }*/
 
             }
-            else if(page == 1 && places.length<5 )
+            else if(page == 1 && places.length<10 )
             {
-                nearradius += 300;
+                nearradius += 250;
                 String url = getDirectionsUrl(centerpoint, Integer.toString(nearradius));
                 new TransTask().execute(url);
                 return;
@@ -967,12 +1078,19 @@ public class MapsActivity extends AppCompatActivity
                     //will be null if a value was missing
                     if(places[p-pagen]!=null){
                         placeMarkers[p]=mMap.addMarker(places[p-pagen]);
-                        /*Nearplace n = new Nearplace(places[p-pagen].getTitle(),places[p-pagen].getSnippet()
-                                ,String.valueOf(places[p-pagen].getPosition().latitude),String.valueOf(places[p-pagen].getPosition().longitude));
-                        NearplaceReference.child(Integer.toString(p)).setValue(n);*/
+                        placeMarkers[p].setTag("nearplace");
+                        NavigationView nv = (NavigationView) findViewById(R.id.Right_Navigation);
+                        final Menu menu = nv.getMenu();
+                        menu.add(0,p,p,placeMarkers[p].getTitle());
+                        if(isManager){
+                            Nearplace n = new Nearplace(places[p-pagen].getTitle(),places[p-pagen].getSnippet()
+                                    ,String.valueOf(places[p-pagen].getPosition().latitude),String.valueOf(places[p-pagen].getPosition().longitude));
+                            NearplaceReference.child(Integer.toString(p)).setValue(n);
+                        }
 
                     }
                 }
+                nearplacenum=p-1;
             }
             while(nxtstring!=null){
                 page++;
@@ -983,15 +1101,26 @@ public class MapsActivity extends AppCompatActivity
                 new TransTask().execute(nxtpgeurl);
             }
             Log.i("Radius",Integer.toString(nearradius));
-            if(nearradius<=900)
+            if(nearradius<=750)
                 mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
-                    centerpoint, DEFAULT_ZOOM));
-            else
+                        centerpoint, DEFAULT_ZOOM));
+            else if(nearradius ==1000)
                 mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
                         centerpoint, DEFAULT_ZOOM-1));
+            else if(nearradius <=3000)
+                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
+                        centerpoint, DEFAULT_ZOOM-2));
+            else if(nearradius <=6000)
+                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
+                        centerpoint, DEFAULT_ZOOM-3));
+            else
+                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
+                        centerpoint, DEFAULT_ZOOM-4));
+
+
 
         }
-        private void parseJSON(String s, Integer page, Integer radius) {
+        private void parseJSON(String s) {
             try {
                 //parse JSON
                 JSONObject resultObject = new JSONObject(s);
@@ -1007,7 +1136,7 @@ public class MapsActivity extends AppCompatActivity
                 }
                 // Log.i("nxtstring: ",nxtstring);
                 places = new MarkerOptions[placesArray.length()];
-                if(placesArray.length() < 5 && radius < 1200 )
+                if(placesArray.length() < 10 )
                     return;
                 for (int p=0; p<placesArray.length(); p++) {
                     //parse each place
@@ -1015,6 +1144,7 @@ public class MapsActivity extends AppCompatActivity
                     LatLng placeLL=null;
                     String placeName="";
                     String vicinity="";
+                    String rating="";
                     try{
                         //attempt to retrieve place data values
                         missingValue=false;
@@ -1042,6 +1172,12 @@ public class MapsActivity extends AppCompatActivity
                         }
                         vicinity = placeObject.getString("vicinity");
                         placeName = placeObject.getString("name");
+                        try{
+                            rating = placeObject.getString("rating");
+                        }
+                        catch(Exception e){
+                            rating = "";
+                        }
 
                     }
                     catch(JSONException jse){
@@ -1055,10 +1191,7 @@ public class MapsActivity extends AppCompatActivity
                         places[p]=new MarkerOptions()
                                 .position(placeLL)
                                 .title(placeName)
-                                .snippet(vicinity);
-                        NavigationView n = (NavigationView) findViewById(R.id.Right_Navigation);
-                        final Menu menu = n.getMenu();
-                        menu.add(0,p+(page-1)*20,p+(page-1)*20,placeName);
+                                .snippet("地址: "+vicinity+"\n"+"評分: "+rating);
 
                     }
 
@@ -1086,7 +1219,6 @@ public class MapsActivity extends AppCompatActivity
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
                 for (DataSnapshot postSnapshot: dataSnapshot.getChildren()) {
-                    // TODO: handle the post
                     Log.v(TAG,""+ postSnapshot.getKey());
                     User user = postSnapshot.getValue(User.class);
                     if(user!= null){
@@ -1107,8 +1239,18 @@ public class MapsActivity extends AppCompatActivity
                         .title("Center Point ")
                         .icon(BitmapDescriptorFactory.defaultMarker(100))
                         .draggable(false));
-                String url = getDirectionsUrl(centerpoint,"300");
-                new TransTask().execute(url);
+                CenterPoint cp = new CenterPoint(Double.toString(lat[0]),Double.toString(lon[0]));
+                if(isManager){
+                    CenterpointReference.setValue(cp);
+                }
+                finplacetype = null;//reset finplacetype
+                placetype.clear();//reset placetype
+                getPlaceTypeSelected();
+                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
+                        new LatLng(centerpoint.latitude,
+                                centerpoint.longitude), DEFAULT_ZOOM)
+                );
+                centermarker.showInfoWindow();
             }
 
             @Override
@@ -1121,26 +1263,41 @@ public class MapsActivity extends AppCompatActivity
 
 
     }
-
+    // TODO: NV_r menu setting
     private void setUpNpitem(){
 
         NP_NV.setNavigationItemSelectedListener(new NavigationView.OnNavigationItemSelectedListener() {
             @Override
             public boolean onNavigationItemSelected(@NonNull MenuItem menuItem) {
                 if(NVrmenupage == 1){
-                    String s = (String) menuItem.getTitle();
-                    int size = markersList.size();
-                    if (size != 0){
-                        for(int i = 0 ; i<size; ++i){
-                            Marker mkr = markersList.get(i);
-                            if(s.equals(mkr.getTitle())){
-                                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
-                                        new LatLng(mkr.getPosition().latitude,
-                                                mkr.getPosition().longitude), DEFAULT_ZOOM)
-                                );
-                                mkr.showInfoWindow();
-                            }
-                        }
+                    //String s = (String) menuItem.getTitle();
+                    int cp = menuItem.getGroupId();
+                    if(cp == 0){
+                        int itemid = menuItem.getItemId();
+                        Marker mkr = markersList.get(itemid);
+                        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
+                                new LatLng(mkr.getPosition().latitude,
+                                        mkr.getPosition().longitude), DEFAULT_ZOOM)
+                        );
+                        mkr.showInfoWindow();
+
+                    }
+                    else if(cp == 1){
+                        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
+                                new LatLng(centerpoint.latitude,
+                                        centerpoint.longitude), DEFAULT_ZOOM)
+                        );
+                        centermarker.showInfoWindow();
+
+                    }
+                    else if (cp == 2){
+                        int itemid = menuItem.getItemId();
+                        Marker mkr = UmarkerList.get(itemid);
+                        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
+                                new LatLng(mkr.getPosition().latitude,
+                                        mkr.getPosition().longitude),DEFAULT_ZOOM)
+                        );
+                        mkr.showInfoWindow();
                     }
                     DL.closeDrawer(Gravity.END);
                 }
@@ -1148,17 +1305,21 @@ public class MapsActivity extends AppCompatActivity
 
 
                 if (NVrmenupage == 2){
-                    for (Marker placeMarker : placeMarkers) {
+                    for (int p=0;p<nearplacenum;p++) {
                         //will be null if a value was missing
-                        if (placeMarker != null) {
-                            placeMarker.setIcon(BitmapDescriptorFactory.defaultMarker(0));
-                            placeMarker.setAlpha(0.6f);
+                        if (placeMarkers[p] != null) {
+                            placeMarkers[p].setIcon(BitmapDescriptorFactory.defaultMarker(0));
+                            placeMarkers[p].setAlpha(0.6f);
                         }
                     }
                     int id = menuItem.getItemId();
                     placeMarkers[id].setIcon(BitmapDescriptorFactory.defaultMarker(200));
                     placeMarkers[id].setAlpha(1.0f);
                     placeMarkers[id].showInfoWindow();
+                    mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
+                            new LatLng(placeMarkers[id].getPosition().latitude,
+                                    placeMarkers[id].getPosition().longitude),DEFAULT_ZOOM)
+                    );
                     DL.closeDrawer(Gravity.END);
                 }
                 return false;
@@ -1170,7 +1331,18 @@ public class MapsActivity extends AppCompatActivity
         Menu menu = NVr.getMenu();
         menu.clear();
         for(int i = 0 ; i<chatmember.size();++i){
-            menu.add(0,i,i,chatmember.get(i));
+            menu.add(0,i,Menu.NONE,chatmember.get(i));
+        }
+        if(centermarker!=null){
+            menu.add(1,0,Menu.NONE,"中心點");
+        }
+        if(UmarkerList.size()!=0){
+            for(int i = 0 ; i<UmarkerList.size();++i){
+                Marker mkr = UmarkerList.get(i);
+                menu.add(2,i,Menu.NONE,mkr.getTitle());
+            }
+
+
         }
     }
 
@@ -1188,7 +1360,7 @@ public class MapsActivity extends AppCompatActivity
                     LatLng latLng = new LatLng(Double.parseDouble(user.Lat), Double.parseDouble(user.Lon));
                     //Log.i("Lat",user.Lat);
                     Marker marker=mMap.addMarker(new MarkerOptions().position(latLng)
-                            .title(user.email).snippet("HI!")
+                            .title(user.email)
                             .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_MAGENTA)));
                     marker.setTag(userKey);
                     markersList.add(marker);
@@ -1254,7 +1426,7 @@ public class MapsActivity extends AppCompatActivity
 
             @Override
             public void onChildAdded(DataSnapshot dataSnapshot, String s) {
-                Log.d(TAG, "onChildChanged:" + dataSnapshot.getKey());
+                Log.d(TAG, "onChildAdded:" + dataSnapshot.getKey());
                 String key = dataSnapshot.getKey();
                 UserMkr usermkr = dataSnapshot.getValue(UserMkr.class);
                 String email=getEmail();
@@ -1385,8 +1557,14 @@ public class MapsActivity extends AppCompatActivity
                             }
 
                         }
-                        del_nearplace_mkr();
-                        getcenterpoint();
+                        NearplaceReference.removeValue();
+                        del_nearplace_mkr();//Clear exist nearplace Marker
+                        NVr.getMenu().clear();//Clear right menu list
+                        NVrmenupage = 2;//set menu page: nearplace list
+                        page = 1;//reset result page
+                        nearradius = 250 ; //default search radius
+                        String url = getDirectionsUrl(centerpoint,"250");//get search url
+                        new TransTask().execute(url);//search nearplace
                     }
 
                 })
@@ -1452,10 +1630,194 @@ public class MapsActivity extends AppCompatActivity
         if (placeMarkers != null) {
             for (Marker placeMarker : placeMarkers) {
                 if (placeMarker != null)
-                    placeMarker.remove();
+                        placeMarker.remove();
             }
         }
+        placeMarkers = new Marker[MAX_PLACES];
     }
+
+    private void set_manager(){
+
+        ValueEventListener ManagerEventListener = new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                Manager m = dataSnapshot.getValue(Manager.class);
+                if(!isManager && isfollowmode && m!=null){
+                    mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(
+                            new LatLng(Double.parseDouble(m.Camerapos_lat),
+                                    Double.parseDouble(m.Camerapos_lon)), Float.parseFloat(m.Camerapos_zoom)));
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                // Getting Post failed, log a message
+                // ...
+            }
+        };
+        ManagerReferenece.addValueEventListener(ManagerEventListener);
+        mManagerValueEventListener = ManagerEventListener;
+
+
+    }
+
+    private void check_manager(){
+        ValueEventListener ManagerValueEventListener = new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                Manager m = dataSnapshot.getValue(Manager.class);
+                if (m == null){
+                    m = new Manager(getEmail(),"0.0","0.0","15");
+                    ManagerReferenece.setValue(m);
+                    isManager = true;
+                    Menu menu = NV.getMenu();
+                    MenuItem item = menu.findItem(R.id.followmode);
+                    item.setVisible(false);
+                }
+                else {
+                    if( getEmail().equals(m.manager_email)) {
+                        isManager = true;
+                        Toast.makeText(getApplicationContext(),"Manger", Toast.LENGTH_SHORT).show();
+                        Menu menu = NV.getMenu();
+                        MenuItem item = menu.findItem(R.id.followmode);
+                        item.setVisible(false);
+
+                    }
+                    else{
+                        isManager = false;
+                        Toast.makeText(getApplicationContext(),"Not Manger", Toast.LENGTH_SHORT).show();
+                    }
+                }
+
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                // Getting Post failed, log a message
+                // ...
+            }
+        };
+        ManagerReferenece.addListenerForSingleValueEvent(ManagerValueEventListener);
+
+    }
+    public  void  set_usersetting(){
+        TinyDB tinydb;
+        tinydb = new TinyDB(this);
+        try{
+            User_MapSettings UserMapSettings = (User_MapSettings) tinydb.getObject("UserMapSettings",User_MapSettings.class);
+            String locreq =UserMapSettings.getIslocreq();
+            if(locreq !=null){
+                if (Objects.equals(locreq, "true")){
+                    locreqflag = 1;
+                    Menu m = NV.getMenu();
+                    MenuItem item = m.findItem(R.id.navRealtimeLoc_Switch);
+                    item.setTitle(R.string.close_realtime_access);
+                    Log.i("set locreqflag",String.valueOf(locreqflag));
+                }
+                else {
+                    locreqflag = -1;
+                    Menu m = NV.getMenu();
+                    MenuItem item = m.findItem(R.id.navRealtimeLoc_Switch);
+                    item.setTitle(R.string.open_realtime_access);
+                    Log.i("set locreqflag",String.valueOf(locreqflag));
+                }
+
+            }
+        }
+        catch (Exception e){
+            User_MapSettings UserMapSettings = new User_MapSettings(getEmail(),"false");
+            tinydb.putObject("UserMapSettings",UserMapSettings);
+        }
+
+    }
+    public void change_usersetting(boolean b){
+        TinyDB tinydb;
+        tinydb = new TinyDB(this);
+
+        if(b){
+            User_MapSettings UserMapSettings = new User_MapSettings(getEmail(),"true");
+            tinydb.putObject("UserMapSettings",UserMapSettings);
+        }
+        else{
+            User_MapSettings UserMapSettings = new User_MapSettings(getEmail(),"false");
+            tinydb.putObject("UserMapSettings",UserMapSettings);
+        }
+    }
+
+    private void set_nearplace_mkr() {
+        ChildEventListener NearplaceEventListener = new ChildEventListener() {
+            @Override
+            public void onChildAdded(DataSnapshot dataSnapshot, String s) {
+                if(isfollowmode){
+                    String key = dataSnapshot.getKey();
+                    Nearplace np = dataSnapshot.getValue(Nearplace.class);
+                    if(np!=null){
+                         LatLng l = new LatLng(Double.parseDouble(np.lat),Double.parseDouble(np.lon));
+                        int ky =Integer.parseInt(key);
+                        placeMarkers[ky]=mMap.addMarker(new MarkerOptions().position(l)
+                            .title(np.title)
+                            .snippet(np.vicinity)
+                            .icon(BitmapDescriptorFactory.defaultMarker(0))
+                            .draggable(false));
+                        placeMarkers[ky].setTag("nearplace");
+                    }
+                }
+            }
+
+            @Override
+            public void onChildChanged(DataSnapshot dataSnapshot, String previousChildName) {
+
+            }
+
+            @Override
+            public void onChildRemoved(DataSnapshot dataSnapshot) {
+                del_nearplace_mkr();
+            }
+
+            @Override
+            public void onChildMoved(DataSnapshot dataSnapshot, String s) {
+
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+
+            }
+        };
+
+        NearplaceReference.addChildEventListener(NearplaceEventListener);
+        mNearPlaceChildEventListener = NearplaceEventListener;
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if ( requestCode == RC_PHOTO_PICKER && resultCode == RESULT_OK ){
+            Uri selectedImageUri = data.getData();
+            StorageReference photoRef = mChatPhotosStorageReferenece.child(selectedImageUri.getLastPathSegment());
+
+            photoRef.putFile(selectedImageUri).addOnSuccessListener(this, new OnSuccessListener<UploadTask.TaskSnapshot>() {
+                @Override
+                public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
+                    @SuppressWarnings("VisibleForTests") Uri downloadUrl = taskSnapshot.getDownloadUrl();
+                    Calendar c = Calendar.getInstance();
+                    int hour = c.get(Calendar.HOUR_OF_DAY);
+                    int minute = c.get(Calendar.MINUTE);
+                    String time;
+                    if ( minute < 10 ){
+                        time = hour +":0"+minute;
+                    }
+                    else{
+                        time = hour +":"+minute;
+                    }
+                    Chat friendlyMessage = new Chat(null, mUsername , downloadUrl.toString(),time);
+                    mFirebaseRef.push().setValue(friendlyMessage);
+                }
+            });
+        }
+    }
+
+
 
 }
 

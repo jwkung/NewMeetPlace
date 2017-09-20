@@ -16,6 +16,8 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.firebase.client.Firebase;
+import com.firebase.client.FirebaseError;
+import com.firebase.client.ValueEventListener;
 import com.google.firebase.database.ChildEventListener;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -23,8 +25,11 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.Query;
 
+import java.util.Map;
+
 import tw.com.example.ben.sharehouse.CHAT.dataModel.House;
 import tw.com.example.ben.sharehouse.CHAT.dataModel.MyUser;
+import tw.com.example.ben.sharehouse.Map.MapsActivity;
 import tw.com.example.ben.sharehouse.R;
 import tw.com.example.ben.sharehouse.edit_house;
 import tw.com.example.ben.sharehouse.lib.TinyDB;
@@ -44,6 +49,9 @@ public class house_list_controler extends Fragment {
     house_list_adapter chatContactAdapter;
     FloatingActionButton fab;
     ListView listView;
+
+
+
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState)
     {
         GV = ((ChatApplication) getActivity().getApplicationContext());
@@ -53,15 +61,33 @@ public class house_list_controler extends Fragment {
         //短按進入聊天室中
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                Intent goChat= new Intent(getActivity(),chat_main_layout_controler.class);
+            public void onItemClick(AdapterView<?> parent, final View view, int position, long id) {
+
                 TextView chat = (TextView) view.findViewById(R.id.chat);
-                String Tochat = chat.getText().toString();//聊天室url
-                Log.i("uri",Tochat);
+                final String Tochat = chat.getText().toString();//聊天室url
+                Firebase chatroomfirebaseurl = new Firebase(Tochat);
+                ValueEventListener postListener = new ValueEventListener() {
+                    @Override
+                    public void onDataChange(com.firebase.client.DataSnapshot dataSnapshot) {
+                        String key = dataSnapshot.getKey();
+                        Intent mapM = new Intent();
+                        mapM.putExtra("roomkey",key);
+                        mapM.putExtra("URL",Tochat);
+                        mapM.setClass(view.getContext(), MapsActivity.class);
+                        startActivity(mapM);
+                    }
+
+                    @Override
+                    public void onCancelled(FirebaseError firebaseError) {
+
+                    }
+                };
+                chatroomfirebaseurl.addListenerForSingleValueEvent(postListener);
+                /*Log.i("uri",Tochat);
                 String name ="聊天室";
                 goChat.putExtra("網址",Tochat);
-                goChat.putExtra("名稱",name);
-                startActivity(goChat);
+                goChat.putExtra("名稱",name);*/
+
             }
         });
         //長按進入選單 可以編輯資料
