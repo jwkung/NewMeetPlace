@@ -5,11 +5,13 @@ package tw.com.example.ben.sharehouse.Map;
  */
 
 public class Sharedata {
+    public String Markertype;
     public String key;
 
     public Sharedata(){}
 
-    public Sharedata(String key){
+    public Sharedata(String type,String key){
         this.key = key;
+        this.Markertype = type;
     }
 }

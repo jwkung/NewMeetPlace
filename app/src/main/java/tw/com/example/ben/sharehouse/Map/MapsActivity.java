@@ -4,7 +4,6 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.DataSetObserver;
-import android.graphics.Camera;
 import android.location.Location;
 import android.net.Uri;
 import android.os.AsyncTask;
@@ -254,20 +253,18 @@ public class MapsActivity extends AppCompatActivity
                 }
 
             });
-            //0807
             setUpToolBar();
             toolbar.setLogo(R.mipmap.ic_launcher);//设置app logo
             toolbar.setTitle(TollBarTitle[0]);//设置主標题
             locreqflag = 1;
-            //0814
-
             placeMarkers = new Marker[MAX_PLACES];
-            //0815
             nearradius = 300;
             NearplaceReference = MapDatabase.getReference().child(Chatroom_Key).child("Nearplace");
             ManagerCameraReferenece = MapDatabase.getReference().child(Chatroom_Key).child("Manager").child("Camera");
             ManagerMarkerReferenece = MapDatabase.getReference().child(Chatroom_Key).child("Manager").child("ClickedMarker");
-            //0826
+            CenterpointReference = MapDatabase.getReference().child(Chatroom_Key).child("CenterPoint");
+            mFirebaseStorage = FirebaseStorage.getInstance();
+            mChatPhotosStorageReferenece = mFirebaseStorage.getReference().child("chat_photos");
             check_manager();
             set_map_member_loc();
             set_map_customize_mkr();
@@ -276,10 +273,8 @@ public class MapsActivity extends AppCompatActivity
             set_nearplace_mkr();
             set_center_mkr();
             set_followmkr();
-            //0904
-            CenterpointReference = MapDatabase.getReference().child(Chatroom_Key).child("CenterPoint");
-            mFirebaseStorage = FirebaseStorage.getInstance();
-            mChatPhotosStorageReferenece = mFirebaseStorage.getReference().child("chat_photos");
+
+
 
 
         }
@@ -832,12 +827,13 @@ public class MapsActivity extends AppCompatActivity
     public boolean onMarkerClick(final Marker marker) {
         if(isManager){
             if(Objects.equals(marker.getTag(), "nearplace")){
-                for (Marker placeMarker : placeMarkers) {
-                    if(marker.getPosition() == placeMarker.getPosition()){
-                       Log.i("placemarker_id: ",placeMarker.getId());
+                    for (int i = 0 ; i<nearplacenum;i++) {
+                        if (Objects.equals(marker.getTitle(), placeMarkers[i].getTitle())) {
+                            Sharedata sd = new Sharedata("nearplace",Integer.toString(i));
+                            ManagerMarkerReferenece.setValue(sd);
+                        }
                     }
                 }
-            }
 
             }
 
@@ -1834,15 +1830,18 @@ public class MapsActivity extends AppCompatActivity
         ValueEventListener CenterpointEventListener = new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
-                CenterPoint cp = dataSnapshot.getValue(CenterPoint.class);
-                if(cp!=null&&isfollowmode){
-                    if(centermarker != null){
-                        centermarker.remove();
+                if (isfollowmode) {
+                    CenterPoint cp = dataSnapshot.getValue(CenterPoint.class);
+                    if (cp != null) {
+                        if (centermarker != null) {
+                            centermarker.remove();
+                        }
+                        centerpoint = new LatLng(Double.parseDouble(cp.lat),Double.parseDouble(cp.lon));
+                        centermarker = mMap.addMarker(new MarkerOptions().position(centerpoint)
+                                .title("Center Point ")
+                                .icon(BitmapDescriptorFactory.defaultMarker(100))
+                                .draggable(false));
                     }
-                    centermarker = mMap.addMarker(new MarkerOptions().position(centerpoint)
-                            .title("Center Point ")
-                            .icon(BitmapDescriptorFactory.defaultMarker(100))
-                            .draggable(false));
                 }
             }
 
@@ -1862,6 +1861,9 @@ public class MapsActivity extends AppCompatActivity
             public void onDataChange(DataSnapshot dataSnapshot) {
                 Sharedata sd = dataSnapshot.getValue(Sharedata.class);
                 if(sd!=null&&isfollowmode){
+                    if(Objects.equals(sd.Markertype, "nearplace")){
+                        placeMarkers[Integer.parseInt(sd.key)].showInfoWindow();
+                    }
 
                 }
             }
