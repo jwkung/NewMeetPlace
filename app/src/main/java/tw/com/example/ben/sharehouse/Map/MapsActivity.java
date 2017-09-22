@@ -4,6 +4,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.DataSetObserver;
+import android.graphics.Camera;
 import android.location.Location;
 import android.net.Uri;
 import android.os.AsyncTask;
@@ -96,8 +97,8 @@ public class MapsActivity extends AppCompatActivity
 
     private static final String TAG = MapsActivity.class.getSimpleName();
     private GoogleMap mMap;
-    private CameraPosition mCameraPosition;
-
+    private CameraPosition mCameraPosition;//地圖相機位置
+    private Double currentCameraLat,currentCameraLon,currentCameraZoom;
     // The entry point to Google Play services, used by the Places API and Fused Location Provider.
     private GoogleApiClient mGoogleApiClient;
 
@@ -107,76 +108,60 @@ public class MapsActivity extends AppCompatActivity
     private static final int DEFAULT_ZOOM = 15;//預設地圖Scale
     private static final int PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 1;
     private boolean mLocationPermissionGranted;
-
     // The geographical location where the device is currently located. That is, the last-known
     // location retrieved by the Fused Location Provider.
     private Location mLastKnownLocation;//使用者目前位置
-
     // Keys for storing activity state.
     private static final String KEY_CAMERA_POSITION = "camera_position";
     private static final String KEY_LOCATION = "location";
-
-    //0723
     private FirebaseAuth mAuth;
-    //0724
-    private DatabaseReference mLocReference;
-    public ChildEventListener  mChildEventListener,mUMkraddChildEventListener ;
-    public List<Marker> markersList,UmarkerList;
+    private DatabaseReference mLocReference;//資料庫存取路徑-使用者位置
+    private DatabaseReference mUMkrReference;//資料庫存取路徑-自訂標記
+    private DatabaseReference NearplaceReference;//資料庫存取路徑-附近地點結果資料
+    private DatabaseReference CenterpointReference;//資料庫存取路徑-中心點位置
+    private DatabaseReference ManagerCameraReferenece;//資料庫存取路徑-聊天室管理者相機位置資料
+    private DatabaseReference ManagerMarkerReferenece;//資料庫存取路徑-聊天室管理者同步畫面資料
+    private ChildEventListener mChildEventListener,mUMkraddChildEventListener ;//資料庫變動監聽事件(使用者位置/自訂標記)
+    private ChildEventListener mNearPlaceChildEventListener;//資料庫變動監聽事件(附近地點結果資料)
+    private ValueEventListener mManagerValueEventListener;//資料庫變動監聽事件(聊天室管理者資料)
+    private ValueEventListener mCenterPointListener;//資料庫變動監聽事件(中心點位置資料)
+    private ValueEventListener mFollowMarkerValueEventListener;
+    public List<Marker> markersList,UmarkerList;//(使用者位置/自訂標記)List
+    public List<String> chatmember;//聊天室成員List
+    public List<String> placetype;//搜尋地點類型List
     public int arrsize;
-    public LocationRequest mLocationRequest;
-    //0729
     public int UMkrNumLimit;
-    private DatabaseReference mUMkrReference;
-    //0805
-    String lastkey,lastemail;
     private int[] TollBarTitle = {R.string.app_name,R.string.RealtimeLoc_Switch,R.string.about};
-    //0807
+    public String lastkey,lastemail;
+    public String Chatroom_Key;
+    private String mUsername;
+    private String finplacetype;
+    public String nxtstring;
+    public LocationRequest mLocationRequest;
     private DrawerLayout DL;
     private FrameLayout FL;
     protected NavigationView NV,NP_NV;
     Toolbar toolbar;
     FirebaseUser currentUser;
-    //0811
     int locreqflag;//是否同步自身位置
-    //0814
     private Marker[] placeMarkers;
     private MarkerOptions[] places;
-    String nxtstring;
     int page;
-    //0815
     LatLng centerpoint;
     private Marker centermarker;
     private int nearradius;
-    private DatabaseReference NearplaceReference;
     private FirebaseDatabase MapDatabase;
-    //0820
     private ImageView send ,addpic ,chat;
-    //0822
     private NavigationView NVr;
     private int NVrmenupage;
-    public  List<String> chatmember;
-    //0826
-    public String Chatroom_Key;
-    //0828
     private ListView LV;
     private boolean flag_chatlist;
-    private String mUsername;
     private Firebase mFirebaseRef;
     private FirebaseListAdapter mChatListAdapter;
     private EditText mMessageEditText;
-    //0829
-    public  List<String> placetype;
-    private String finplacetype;
-    //0904
-    private DatabaseReference CenterpointReference;
-    //0913
-    private DatabaseReference ManagerReferenece;
     public Boolean isManager,isfollowmode;
-    private ValueEventListener mManagerValueEventListener;
     private int nearplacenum;
     int MAX_PLACES = 60;
-    //0918
-    private ChildEventListener mNearPlaceChildEventListener;
     private static final int RC_PHOTO_PICKER = 2 ;
     private StorageReference mChatPhotosStorageReferenece;
     private FirebaseStorage mFirebaseStorage;
@@ -192,7 +177,6 @@ public class MapsActivity extends AppCompatActivity
             mLastKnownLocation = savedInstanceState.getParcelable(KEY_LOCATION);
             mCameraPosition = savedInstanceState.getParcelable(KEY_CAMERA_POSITION);
         }
-
         // Retrieve the content view that renders the map.
         setContentView(R.layout.activity_maps);
         // Build the Play services client for use by the Fused Location Provider and the Places API.
@@ -208,7 +192,6 @@ public class MapsActivity extends AppCompatActivity
         mGoogleApiClient.connect();
         FirebaseApp app = FirebaseApp.getInstance("MapRtDb");
         MapDatabase = FirebaseDatabase.getInstance(app);
-        //MapDatabase.setPersistenceEnabled(true);
         mAuth = FirebaseAuth.getInstance();
         currentUser = mAuth.getCurrentUser();
         Intent it = getIntent();
@@ -282,7 +265,8 @@ public class MapsActivity extends AppCompatActivity
             //0815
             nearradius = 300;
             NearplaceReference = MapDatabase.getReference().child(Chatroom_Key).child("Nearplace");
-            ManagerReferenece = MapDatabase.getReference().child(Chatroom_Key).child("Manager");
+            ManagerCameraReferenece = MapDatabase.getReference().child(Chatroom_Key).child("Manager").child("Camera");
+            ManagerMarkerReferenece = MapDatabase.getReference().child(Chatroom_Key).child("Manager").child("ClickedMarker");
             //0826
             check_manager();
             set_map_member_loc();
@@ -290,6 +274,8 @@ public class MapsActivity extends AppCompatActivity
             set_manager();
             set_usersetting();
             set_nearplace_mkr();
+            set_center_mkr();
+            set_followmkr();
             //0904
             CenterpointReference = MapDatabase.getReference().child(Chatroom_Key).child("CenterPoint");
             mFirebaseStorage = FirebaseStorage.getInstance();
@@ -498,6 +484,8 @@ public class MapsActivity extends AppCompatActivity
     }
     @Override
     public void onInfoWindowClick(final Marker marker) {
+        if(isfollowmode)
+            return;
         if(marker.getTag() == "nearplace")
             return;
         centerpoint = new LatLng(marker.getPosition().latitude,marker.getPosition().longitude);
@@ -508,6 +496,8 @@ public class MapsActivity extends AppCompatActivity
 
     @Override
     public void onInfoWindowLongClick(final Marker marker) {
+        if(isfollowmode)
+            return;
         int size=UmarkerList.size();
         int flag=0;
         for(int m=0 ; m < size; ++m) {
@@ -763,10 +753,16 @@ public class MapsActivity extends AppCompatActivity
             }
         }
         if(mManagerValueEventListener!=null){
-            ManagerReferenece.removeEventListener(mManagerValueEventListener);
+            ManagerCameraReferenece.removeEventListener(mManagerValueEventListener);
         }
-        if( mNearPlaceChildEventListener != null){
+        if(mNearPlaceChildEventListener != null){
             NearplaceReference.removeEventListener(mNearPlaceChildEventListener);
+        }
+        if(mCenterPointListener!=null){
+            CenterpointReference.removeEventListener(mCenterPointListener);
+        }
+        if(mFollowMarkerValueEventListener != null){
+            ManagerMarkerReferenece.removeEventListener(mFollowMarkerValueEventListener);
         }
 
     }
@@ -834,6 +830,17 @@ public class MapsActivity extends AppCompatActivity
     //0804
     @Override
     public boolean onMarkerClick(final Marker marker) {
+        if(isManager){
+            if(Objects.equals(marker.getTag(), "nearplace")){
+                for (Marker placeMarker : placeMarkers) {
+                    if(marker.getPosition() == placeMarker.getPosition()){
+                       Log.i("placemarker_id: ",placeMarker.getId());
+                    }
+                }
+            }
+
+            }
+
 
         return false;
     }
@@ -905,13 +912,21 @@ public class MapsActivity extends AppCompatActivity
                             isfollowmode = true;
                             Menu m = NV.getMenu();
                             MenuItem item = m.findItem(R.id.followmode);
+                            MenuItem item2 = m.findItem(R.id.getcenterpoint);
+                            MenuItem item3 = m.findItem(R.id.hidenearplace);
                             item.setTitle(R.string.closefollowmode);
+                            item2.setVisible(false);
+                            item3.setVisible(false);
                         }
                         else{
                             isfollowmode = false;
                             Menu m = NV.getMenu();
                             MenuItem item = m.findItem(R.id.followmode);
+                            MenuItem item2 = m.findItem(R.id.getcenterpoint);
+                            MenuItem item3 = m.findItem(R.id.hidenearplace);
                             item.setTitle(R.string.followmode);
+                            item2.setVisible(true);
+                            item3.setVisible(true);
                         }
                         DL.closeDrawer(GravityCompat.START);
                         break;
@@ -1019,8 +1034,11 @@ public class MapsActivity extends AppCompatActivity
                     CameraLat[0] = mMap.getCameraPosition().target.latitude;
                     CameraLon[0] = mMap.getCameraPosition().target.longitude;
                     CameraZoom[0] = mMap.getCameraPosition().zoom;
+                    currentCameraLat = CameraLat[0];
+                    currentCameraLon = CameraLon[0];
+                    currentCameraZoom = CameraZoom[0];
                     Manager m = new Manager(getEmail(),Double.toString(CameraLat[0]),Double.toString(CameraLon[0]),Double.toString(CameraZoom[0]));
-                    ManagerReferenece.setValue(m);
+                    ManagerCameraReferenece.setValue(m);
                 }
             });
         }
@@ -1366,13 +1384,6 @@ public class MapsActivity extends AppCompatActivity
                     markersList.add(marker);
                     chatmember.add(user.email);
                 }
-               /* Marker currentMarker = markersList.get(arrsize);
-                                     LatLng lat = currentMarker.getPosition();
-                                      Log.i("Lat",Double.toString(lat.latitude));
-                                      arrsize++;
-                                      */
-
-                // [END_EXCLUDE]
             }
 
             @Override
@@ -1531,7 +1542,6 @@ public class MapsActivity extends AppCompatActivity
     }
 
     private void getPlaceTypeSelected(){
-
         final View item = LayoutInflater.from(MapsActivity.this).inflate(R.layout.placetypeselected, null);
         for(int i = 0;i<4;i++){
             placetype.add("null");
@@ -1655,7 +1665,7 @@ public class MapsActivity extends AppCompatActivity
                 // ...
             }
         };
-        ManagerReferenece.addValueEventListener(ManagerEventListener);
+        ManagerCameraReferenece.addValueEventListener(ManagerEventListener);
         mManagerValueEventListener = ManagerEventListener;
 
 
@@ -1668,7 +1678,7 @@ public class MapsActivity extends AppCompatActivity
                 Manager m = dataSnapshot.getValue(Manager.class);
                 if (m == null){
                     m = new Manager(getEmail(),"0.0","0.0","15");
-                    ManagerReferenece.setValue(m);
+                    ManagerCameraReferenece.setValue(m);
                     isManager = true;
                     Menu menu = NV.getMenu();
                     MenuItem item = menu.findItem(R.id.followmode);
@@ -1697,7 +1707,7 @@ public class MapsActivity extends AppCompatActivity
                 // ...
             }
         };
-        ManagerReferenece.addListenerForSingleValueEvent(ManagerValueEventListener);
+        ManagerCameraReferenece.addListenerForSingleValueEvent(ManagerValueEventListener);
 
     }
     public  void  set_usersetting(){
@@ -1810,11 +1820,62 @@ public class MapsActivity extends AppCompatActivity
                     else{
                         time = hour +":"+minute;
                     }
-                    Chat friendlyMessage = new Chat(null, mUsername , downloadUrl.toString(),time);
+                    Chat friendlyMessage = null;
+                    if (downloadUrl != null) {
+                        friendlyMessage = new Chat(null, mUsername , downloadUrl.toString(),time);
+                    }
                     mFirebaseRef.push().setValue(friendlyMessage);
                 }
             });
         }
+    }
+
+    private void set_center_mkr(){
+        ValueEventListener CenterpointEventListener = new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                CenterPoint cp = dataSnapshot.getValue(CenterPoint.class);
+                if(cp!=null&&isfollowmode){
+                    if(centermarker != null){
+                        centermarker.remove();
+                    }
+                    centermarker = mMap.addMarker(new MarkerOptions().position(centerpoint)
+                            .title("Center Point ")
+                            .icon(BitmapDescriptorFactory.defaultMarker(100))
+                            .draggable(false));
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                // Getting Post failed, log a message
+                // ...
+            }
+        };
+        CenterpointReference.addValueEventListener(CenterpointEventListener);
+        mCenterPointListener = CenterpointEventListener;
+
+    }
+    private void set_followmkr(){
+        ValueEventListener FollowMarkerEventListener = new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                Sharedata sd = dataSnapshot.getValue(Sharedata.class);
+                if(sd!=null&&isfollowmode){
+
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                // Getting Post failed, log a message
+                // ...
+            }
+        };
+        ManagerMarkerReferenece.addValueEventListener(FollowMarkerEventListener);
+        mFollowMarkerValueEventListener=FollowMarkerEventListener;
+
+
     }
 
 
