@@ -5,6 +5,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
@@ -23,6 +24,7 @@ public class search extends AppCompatActivity implements AdapterView.OnItemClick
     TinyDB tinyDB ;
     search_list_adapter adapter;
     EditText editText;
+    Button button;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -35,6 +37,8 @@ public class search extends AppCompatActivity implements AdapterView.OnItemClick
         mFirebaseRef =new Firebase("https://sharehousetest.firebaseio.com/users");
 
         editText = (EditText) findViewById(R.id.text);
+        button = (Button) findViewById(R.id.commit);
+
         listView.setOnItemClickListener(this);
         adapter= new search_list_adapter(this,mFirebaseRef);
         listView.setAdapter(adapter);
@@ -65,6 +69,11 @@ public class search extends AppCompatActivity implements AdapterView.OnItemClick
          House house= (House) tinyDB.getObject("newchatroom",House.class);
          connect.push().setValue(house);
          Log.v("444",friendtable);
+     }
+
+     public void searchcheck(View v)
+     {
+         finish();
      }
 
     @Override
