@@ -136,4 +136,5 @@
     <color name="GJJOrange">#e98923</color>
     <color name="GJ_blue">#a763a9ef</color>
     <color name="chatroom_bk">#76d3f1fb</color>
+    <color name="infowindowtextcolor">#238ffa</color>
 </resources>

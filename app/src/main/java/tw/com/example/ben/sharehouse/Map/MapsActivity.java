@@ -130,6 +130,11 @@ public class MapsActivity extends AppCompatActivity
     public List<String> placetype;//搜尋地點類型List
     public int arrsize;
     public int UMkrNumLimit;
+    public int MAX_PLACES = 60;
+    private int nearradius;
+    private int NVrmenupage;
+    private int nearplacenum;
+    private static final int RC_PHOTO_PICKER = 2 ;
     private int[] TollBarTitle = {R.string.app_name,R.string.RealtimeLoc_Switch,R.string.about};
     public String lastkey,lastemail;
     public String Chatroom_Key;
@@ -148,20 +153,15 @@ public class MapsActivity extends AppCompatActivity
     int page;
     LatLng centerpoint;
     private Marker centermarker;
-    private int nearradius;
     private FirebaseDatabase MapDatabase;
     private ImageView send ,addpic ,chat;
     private NavigationView NVr;
-    private int NVrmenupage;
     private ListView LV;
     private boolean flag_chatlist;
     private Firebase mFirebaseRef;
     private FirebaseListAdapter mChatListAdapter;
     private EditText mMessageEditText;
     public Boolean isManager,isfollowmode;
-    private int nearplacenum;
-    int MAX_PLACES = 60;
-    private static final int RC_PHOTO_PICKER = 2 ;
     private StorageReference mChatPhotosStorageReferenece;
     private FirebaseStorage mFirebaseStorage;
 
@@ -440,8 +440,16 @@ public class MapsActivity extends AppCompatActivity
             // Return null here, so that getInfoContents() is called next.
             public View getInfoWindow(Marker marker)
             {
-                View infoWindow = getLayoutInflater().inflate(R.layout.custom_info_contents,
-                        (FrameLayout)findViewById(R.id.map), false);
+                View infoWindow;
+               if(marker.getTag() == "nearplace"){
+                   infoWindow = getLayoutInflater().inflate(R.layout.custom_info_contents,
+                           (FrameLayout)findViewById(R.id.map), false);
+               }
+               else{
+                   infoWindow = getLayoutInflater().inflate(R.layout.custom_info_contents2,
+                           (FrameLayout)findViewById(R.id.map), false);
+               }
+
 
                 TextView title = ((TextView) infoWindow.findViewById(R.id.title));
                 title.setText(marker.getTitle());
@@ -827,13 +835,34 @@ public class MapsActivity extends AppCompatActivity
     public boolean onMarkerClick(final Marker marker) {
         if(isManager){
             if(Objects.equals(marker.getTag(), "nearplace")){
-                    for (int i = 0 ; i<nearplacenum;i++) {
-                        if (Objects.equals(marker.getTitle(), placeMarkers[i].getTitle())) {
-                            Sharedata sd = new Sharedata("nearplace",Integer.toString(i));
-                            ManagerMarkerReferenece.setValue(sd);
-                        }
+                for (int i = 0 ; i<nearplacenum;i++) {
+                    if (Objects.equals(marker.getTitle(), placeMarkers[i].getTitle())) {
+                        Sharedata sd = new Sharedata("nearplace",Integer.toString(i));
+                        ManagerMarkerReferenece.setValue(sd);
+                        return false;
                     }
                 }
+            }
+            else if(Objects.equals(marker.getTag(), "Centermarker")){
+                Sharedata sd = new Sharedata("Centermarker","NULL");
+                ManagerMarkerReferenece.setValue(sd);
+            }
+            else{
+                for(int i =0;i<markersList.size();i++){
+                    if(Objects.equals(marker.getTag(),markersList.get(i).getTag())){
+                        Sharedata sd = new Sharedata("usermkr",String.valueOf(markersList.get(i).getTag()));
+                        ManagerMarkerReferenece.setValue(sd);
+                        return false;
+                    }
+                }
+                for(int i =0;i<UmarkerList.size();i++){
+                    if(Objects.equals(marker.getTag(),UmarkerList.get(i).getTag())){
+                        Sharedata sd = new Sharedata("Customizemkr",String.valueOf(UmarkerList.get(i).getTag()));
+                        ManagerMarkerReferenece.setValue(sd);
+                        return false;
+                    }
+                }
+            }
 
             }
 
@@ -1104,7 +1133,7 @@ public class MapsActivity extends AppCompatActivity
 
                     }
                 }
-                nearplacenum=p-1;
+                nearplacenum=p;
             }
             while(nxtstring!=null){
                 page++;
@@ -1250,9 +1279,10 @@ public class MapsActivity extends AppCompatActivity
                     centermarker.remove();
                 }
                 centermarker = mMap.addMarker(new MarkerOptions().position(centerpoint)
-                        .title("Center Point ")
+                        .title("Center Point")
                         .icon(BitmapDescriptorFactory.defaultMarker(100))
                         .draggable(false));
+                centermarker.setTag("Centermarker");
                 CenterPoint cp = new CenterPoint(Double.toString(lat[0]),Double.toString(lon[0]));
                 if(isManager){
                     CenterpointReference.setValue(cp);
@@ -1841,6 +1871,7 @@ public class MapsActivity extends AppCompatActivity
                                 .title("Center Point ")
                                 .icon(BitmapDescriptorFactory.defaultMarker(100))
                                 .draggable(false));
+                        centermarker.setTag("Centermarker");
                     }
                 }
             }
@@ -1864,7 +1895,23 @@ public class MapsActivity extends AppCompatActivity
                     if(Objects.equals(sd.Markertype, "nearplace")){
                         placeMarkers[Integer.parseInt(sd.key)].showInfoWindow();
                     }
-
+                    if(Objects.equals(sd.Markertype, "usermkr")){
+                        for(int i=0 ; i<markersList.size() ; i++){
+                            if(Objects.equals(sd.key,markersList.get(i).getTag())){
+                                markersList.get(i).showInfoWindow();
+                            }
+                        }
+                    }
+                    if(Objects.equals(sd.Markertype, "Customizemkr")){
+                        for(int i=0 ; i<UmarkerList.size() ; i++){
+                            if(Objects.equals(sd.key,UmarkerList.get(i).getTag())){
+                                UmarkerList.get(i).showInfoWindow();
+                            }
+                        }
+                    }
+                    if(Objects.equals(sd.Markertype, "Centermarker")){
+                        centermarker.showInfoWindow();
+                    }
                 }
             }
 
