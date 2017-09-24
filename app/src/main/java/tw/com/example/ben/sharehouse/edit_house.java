@@ -29,5 +29,6 @@ public class edit_house extends AppCompatActivity {
 
         mDatabase = FirebaseDatabase.getInstance().getReference();
         new Firebase(GV.getChange_House_Name()).child("name").setValue(housename);
+        finish();
     }
 }
