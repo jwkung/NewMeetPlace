@@ -62,27 +62,32 @@ public class house_list_controler extends Fragment {
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, final View view, int position, long id) {
-
                 TextView chat = (TextView) view.findViewById(R.id.chat);
+                String check = chat.getText().toString();//聊天室url
                 final String Tochat = chat.getText().toString();//聊天室url
-                Firebase chatroomfirebaseurl = new Firebase(Tochat);
-                ValueEventListener postListener = new ValueEventListener() {
-                    @Override
-                    public void onDataChange(com.firebase.client.DataSnapshot dataSnapshot) {
-                        String key = dataSnapshot.getKey();
-                        Intent mapM = new Intent();
-                        mapM.putExtra("roomkey",key);
-                        mapM.putExtra("URL",Tochat);
-                        mapM.setClass(view.getContext(), MapsActivity.class);
-                        startActivity(mapM);
-                    }
+                try{
+                    Firebase chatroomfirebaseurl = new Firebase(Tochat);
+                    ValueEventListener postListener = new ValueEventListener() {
+                        @Override
+                        public void onDataChange(com.firebase.client.DataSnapshot dataSnapshot) {
+                            String key = dataSnapshot.getKey();
+                            Intent mapM = new Intent();
+                            mapM.putExtra("roomkey",key);
+                            mapM.putExtra("URL",Tochat);
+                            mapM.setClass(view.getContext(), MapsActivity.class);
+                            startActivity(mapM);
+                        }
 
-                    @Override
-                    public void onCancelled(FirebaseError firebaseError) {
+                        @Override
+                        public void onCancelled(FirebaseError firebaseError) {
+                        }
+                    };
+                    chatroomfirebaseurl.addListenerForSingleValueEvent(postListener);
+                }
+                catch(Exception e){
+                    Toast.makeText(getActivity(),"讀取中，請稍後!", Toast.LENGTH_SHORT).show();
+                }
 
-                    }
-                };
-                chatroomfirebaseurl.addListenerForSingleValueEvent(postListener);
                 /*Log.i("uri",Tochat);
                 String name ="聊天室";
                 goChat.putExtra("網址",Tochat);
@@ -268,6 +273,8 @@ public class house_list_controler extends Fragment {
         mFirebaseRef = new Firebase(FIREBASE_URL);
         //設定標題
         getActivity().setTitle("聊天室");
+
+
     }
     @Override
     public void onStart() {
@@ -275,6 +282,7 @@ public class house_list_controler extends Fragment {
         //資料塞入listView
         chatContactAdapter = new house_list_adapter(getActivity(),mFirebaseRef);
         listView.setAdapter(chatContactAdapter);
+
     }
     @Override
     public void onStop() {
