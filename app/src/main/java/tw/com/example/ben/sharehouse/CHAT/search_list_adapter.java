@@ -154,9 +154,9 @@ public class search_list_adapter extends BaseAdapter{
         String friendtable = MyUser.getHouseTable();
         tinydb.putString("friend", houseUrl);
         tinydb.putString("friendtable", friendtable);
-        String name;
+        String name = houseUrl.substring(0,houseUrl.indexOf("@"));
         TextView nameView = (TextView) view.findViewById(R.id.name);
-        nameView.setText(houseUrl);
+        nameView.setText(name);
     }
     public void cleanup() {
         //移除監聽器、container

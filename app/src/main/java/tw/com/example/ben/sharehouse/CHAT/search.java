@@ -9,6 +9,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.firebase.client.Firebase;
 
@@ -69,6 +70,10 @@ public class search extends AppCompatActivity implements AdapterView.OnItemClick
          House house= (House) tinyDB.getObject("newchatroom",House.class);
          connect.push().setValue(house);
          Log.v("444",friendtable);
+         String name =  editText.getText().toString();
+         String subname = name.substring(0,name.indexOf("@"));
+
+         Toast.makeText(this,subname+"已加入聊天室", Toast.LENGTH_SHORT).show();
      }
 
      public void searchcheck(View v)
