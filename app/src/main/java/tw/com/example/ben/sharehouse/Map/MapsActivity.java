@@ -128,7 +128,6 @@ public class MapsActivity extends AppCompatActivity
     public List<Marker> markersList,UmarkerList;//(使用者位置/自訂標記)List
     public List<String> chatmember;//聊天室成員List
     public List<String> placetype;//搜尋地點類型List
-    public int arrsize;
     public int UMkrNumLimit;
     public int MAX_PLACES = 60;
     private int nearradius;
@@ -189,10 +188,13 @@ public class MapsActivity extends AppCompatActivity
                 .addApi(Places.PLACE_DETECTION_API)
                 .build();
         mGoogleApiClient.connect();
+        //地圖資料庫路徑
         FirebaseApp app = FirebaseApp.getInstance("MapRtDb");
         MapDatabase = FirebaseDatabase.getInstance(app);
+        //聊天室資料庫-使用者資料
         mAuth = FirebaseAuth.getInstance();
         currentUser = mAuth.getCurrentUser();
+        //取得房間號碼及相關設定
         Intent it = getIntent();
         String FIREBASE_URL = it.getStringExtra("URL");
         Chatroom_Key=it.getStringExtra("roomkey");
@@ -204,22 +206,21 @@ public class MapsActivity extends AppCompatActivity
         mMessageEditText = (EditText) findViewById( R.id.messageInput) ;
         isfollowmode = false;
         isManager = false;
+        //檢查使用者是否存在(有無登入)
         if(currentUser==null ){
             Intent intent = new Intent();
             intent.setClass(MapsActivity.this, LoginActivity.class);
             startActivity(intent);
             finish();
         }
-        //0724
         else {
-            //0819
+            //使用者位置標記路徑及儲存LIST
             mLocReference = MapDatabase.getReference().child(Chatroom_Key).child("users");
             markersList = new ArrayList<>();
-            arrsize = 0;
-            //0729
-            UMkrNumLimit = 1;
+            //使用者自訂標記路徑、儲存LIST及個人自訂標記數量上限
             mUMkrReference = MapDatabase.getReference().child(Chatroom_Key).child("Umarker");
             UmarkerList = new ArrayList<>();
+            UMkrNumLimit = 1;
 
             FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.btn_rightdrawer);
             FloatingActionButton fab_addusrmkr = (FloatingActionButton) findViewById(R.id.addusermkr);
@@ -253,36 +254,36 @@ public class MapsActivity extends AppCompatActivity
                 }
 
             });
-            setUpToolBar();
-            toolbar.setLogo(R.mipmap.ic_launcher);//设置app logo
-            toolbar.setTitle(TollBarTitle[0]);//设置主標题
-            locreqflag = 1;
+            setUpToolBar();//上方工具列功能實作
+            locreqflag = 1;//同步自身位置旗標
+            //附近位置儲存陣列及初始搜索半徑
             placeMarkers = new Marker[MAX_PLACES];
-            nearradius = 300;
+            nearradius = 250;
+            //設定相關功能資料庫路徑
             NearplaceReference = MapDatabase.getReference().child(Chatroom_Key).child("Nearplace");
             ManagerCameraReferenece = MapDatabase.getReference().child(Chatroom_Key).child("Manager").child("Camera");
             ManagerMarkerReferenece = MapDatabase.getReference().child(Chatroom_Key).child("Manager").child("ClickedMarker");
             CenterpointReference = MapDatabase.getReference().child(Chatroom_Key).child("CenterPoint");
             mFirebaseStorage = FirebaseStorage.getInstance();
             mChatPhotosStorageReferenece = mFirebaseStorage.getReference().child("chat_photos");
-            check_manager();
-            set_map_member_loc();
-            set_map_customize_mkr();
-            set_manager();
-            set_usersetting();
-            set_nearplace_mkr();
-            set_center_mkr();
-            set_followmkr();
+            check_manager();//檢查誰是管理員
+            set_map_member_loc();//使用者位置標記監聽實作
+            set_map_customize_mkr();//使用者自訂標記監聽實作
+            set_manager();//管理員的地圖同步資料監聽實作
+            set_usersetting();//使用者設定-是否開啟同步位置
+            set_nearplace_mkr();//附近地點標記監聽實作-追隨模式
+            set_center_mkr();//中心點位置監聽實作-追隨模式
+            set_followmkr();//標記同步顯示-追隨模式
 
 
 
 
         }
-        //0820
+        //下方工作列按鈕及各項監聽實作
         send = (ImageView) findViewById(R.id.sendButton);
         addpic = (ImageView) findViewById( R.id.pic);
         chat = (ImageView) findViewById( R.id.chatB);
-        //0821
+
         addpic.setOnClickListener(new View.OnClickListener(){
             @Override
             public void onClick(View view) {
@@ -341,12 +342,13 @@ public class MapsActivity extends AppCompatActivity
         });
         send.setOnTouchListener(new IconSmallerOnTouchListener());
 
-        //0822
+        //右側導覽列、列表頁面號碼、聊天室成員列表LIST及附近地點類型LIST
         NVr = (NavigationView) findViewById(R.id.Right_Navigation);
         NVrmenupage = 1;
         chatmember = new ArrayList<>();
         placetype = new ArrayList<>();
 
+        //聊天紀錄
         mChatListAdapter = new FirebaseListAdapter(mFirebaseRef, this, mUsername,R.layout.chat_user1_item);
         //綁定adapter
         LV.setAdapter(mChatListAdapter);
@@ -376,10 +378,7 @@ public class MapsActivity extends AppCompatActivity
             super.onSaveInstanceState(outState);
         }
     }
-    public void onPause(){
-        super.onPause();
 
-    }
 
     /**
      * Builds the map when the Google Play services client is successfully connected.
@@ -485,22 +484,25 @@ public class MapsActivity extends AppCompatActivity
         //mMap.setOnCameraMoveCanceledListener(this);
 
     }
+    //資訊視窗點擊事件
     @Override
     public void onInfoWindowClick(final Marker marker) {
-        if(isfollowmode)
+        if(isfollowmode)//追隨模式中不可使用附近地點搜尋
             return;
-        if(marker.getTag() == "nearplace")
+        if(marker.getTag() == "nearplace")//附近地點不可再進行一次附近地點搜尋
             return;
-        centerpoint = new LatLng(marker.getPosition().latitude,marker.getPosition().longitude);
+        centerpoint = new LatLng(marker.getPosition().latitude,marker.getPosition().longitude);//將選取的標記設為中心點
         finplacetype = null;//reset finplacetype
         placetype.clear();//reset placetype
-        getPlaceTypeSelected();
+        getPlaceTypeSelected();//進行附近地點搜尋
     }
 
+    //資訊視窗長按事件
     @Override
     public void onInfoWindowLongClick(final Marker marker) {
-        if(isfollowmode)
+        if(isfollowmode)//追隨模式中不可使用相關功能
             return;
+        //判斷該標記是不是自訂標記，不是的話不做任何動作
         int size=UmarkerList.size();
         int flag=0;
         for(int m=0 ; m < size; ++m) {
@@ -516,6 +518,7 @@ public class MapsActivity extends AppCompatActivity
         if(flag == 0){
             return ;
         }
+        //自訂標記的相關功能-修改刪除
         String t = marker.getTitle();
         final LatLng L = marker.getPosition();
         final View item = LayoutInflater.from(MapsActivity.this).inflate(R.layout.modify_mkrtitle, null);
@@ -640,7 +643,18 @@ public class MapsActivity extends AppCompatActivity
         }
 
         // Set the map's camera position to the current location of the device.
-        if (mCameraPosition != null) {
+        TinyDB tinydb;
+        tinydb = new TinyDB(this);
+        User_MapSettings Ums = (User_MapSettings) tinydb.getObject("UserMapSettings",User_MapSettings.class);
+        String lat = Ums.getCurrentCameraLat();
+        String lon = Ums.getCurrentCameraLon();
+        String zoom = Ums.getCurrentCameraZoom();
+        if(lat != null && lon != null && zoom != null){
+            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
+                        new LatLng(Double.parseDouble(lat),
+                                Double.parseDouble(lon)), Float.parseFloat(zoom)));
+
+        }else if (mCameraPosition != null) {
             mMap.moveCamera(CameraUpdateFactory.newCameraPosition(mCameraPosition));
         } else if (mLastKnownLocation != null) {
             mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
@@ -707,7 +721,7 @@ public class MapsActivity extends AppCompatActivity
             mLastKnownLocation = null;
         }
     }
-    //0723
+    //將自身位置傳送至資料庫
     public void submitlocation(Location L) {
         if(currentUser!=null){
             String userId = getUid();
@@ -716,9 +730,11 @@ public class MapsActivity extends AppCompatActivity
             mLocReference.child(userId).setValue(user);
         }
     }
+    //使用者的UID
     public String getUid() {
         return currentUser.getUid();
     }
+    //使用者的信箱
     public String getEmail() {
         return currentUser.getEmail();
     }
@@ -727,9 +743,9 @@ public class MapsActivity extends AppCompatActivity
         super.onStart();
     }
 
-
     public void onDestroy(){
         super.onDestroy();
+        //移除所有的監聽事件及清空相關LIST
         if (mChildEventListener != null) {
             mLocReference.removeEventListener(mChildEventListener);
         }
@@ -772,19 +788,36 @@ public class MapsActivity extends AppCompatActivity
 
     public void onStop() {
         super.onStop();
+        TinyDB tinydb;
+        tinydb = new TinyDB(this);
+        User_MapSettings Ums = (User_MapSettings) tinydb.getObject("UserMapSettings",User_MapSettings.class);
+        String locreq = Ums.getIslocreq();
+        if(currentCameraLat != null && currentCameraLon != null && currentCameraZoom != null) {
+            User_MapSettings UserMapSettings = new User_MapSettings(getEmail(),locreq,String.valueOf(currentCameraLat),
+                    String.valueOf(currentCameraLon),String.valueOf(currentCameraZoom));
+            tinydb.putObject("UserMapSettings", UserMapSettings);
+        }
+    }
+    @Override
+    public void onPause(){
+        super.onPause();
+    }
+    @Override
+    public void onResume(){
+        super.onResume();
+    }
+    @Override
+    public void onRestart(){
+        super.onRestart();
     }
 
-
-    public void onResume(){super.onResume();}
-
-    //0725
     @Override
     public void onLocationChanged(Location l) {
         if(locreqflag == 1){
             submitlocation(l);
         }
     }
-    //0729
+    //傳送自訂標記資料到資料庫
     private void submitUmkrlocation(String Le , String Lo ){
         String t = "Drag Marker";
         String e = getEmail();
@@ -792,7 +825,7 @@ public class MapsActivity extends AppCompatActivity
         mUMkrReference.push().setValue(umkr);
     }
     // TODO: Marker Drag
-    //0730
+    //標記拖曳的三個監聽事件
     @Override
     public void onMarkerDragStart(Marker marker) {
 
@@ -830,9 +863,10 @@ public class MapsActivity extends AppCompatActivity
         }
 
     }
-    //0804
+    //標記點擊事件
     @Override
     public boolean onMarkerClick(final Marker marker) {
+        //如果是聊天室管理者，傳送自己點擊的標記，讓開啟追隨模式的成員自動同步點擊該標記
         if(isManager){
             if(Objects.equals(marker.getTag(), "nearplace")){
                 for (int i = 0 ; i<nearplacenum;i++) {
@@ -890,6 +924,7 @@ public class MapsActivity extends AppCompatActivity
         setUpNpitem();
     }
     // TODO: nv_menu setting
+    //左側導覽列實作
     private void setUpNavigation() {
         // Set navigation item selected listener
         NV.setNavigationItemSelectedListener(new NavigationView.OnNavigationItemSelectedListener() {
@@ -988,8 +1023,11 @@ public class MapsActivity extends AppCompatActivity
         });
 
     }
-    public void setUpToolBar() {//設置ToolBar
+    //上方ToolBar實作
+    public void setUpToolBar() {
         //setSupportActionBar(toolbar);
+        toolbar.setLogo(R.mipmap.ic_launcher);//设置app logo
+        toolbar.setTitle(TollBarTitle[0]);//设置主標题
         toolbar.setNavigationOnClickListener(new View.OnClickListener(){
             @Override
             public void onClick(View view) {
@@ -1027,7 +1065,7 @@ public class MapsActivity extends AppCompatActivity
         actionBarDrawerToggle.syncState();
     }
     // TODO: Nearplace setting
-    //0811
+    //查詢附近地點URL設定
     private String getDirectionsUrl(LatLng centerpoint,String radius){
 
         Log.i("placetype",finplacetype);
@@ -1038,7 +1076,7 @@ public class MapsActivity extends AppCompatActivity
                 "&key=AIzaSyAwcdfH7kgP5AJwS2NZdvDyot7TLnLh-A8";
 
     }
-
+    //附近地點搜尋結果中的下一頁URL
     private  String nextpage(String nxt){
 
         return  "https://maps.googleapis.com/maps/api/place/nearbysearch/json?"+
@@ -1046,14 +1084,14 @@ public class MapsActivity extends AppCompatActivity
                 "&key=AIzaSyAwcdfH7kgP5AJwS2NZdvDyot7TLnLh-A8";
     }
 
+    //地圖相機監聽事件實作
     @Override
     public void onCameraIdle() {
-        Log.i("idle","idle");
-        if(isManager){
-            final double[] CameraLat = new double[1];
-            final double[] CameraLon = new double[1];
-            final double[] CameraZoom = new double[1];
-            mMap.setOnMapLoadedCallback(new GoogleMap.OnMapLoadedCallback() {
+
+        final double[] CameraLat = new double[1];
+        final double[] CameraLon = new double[1];
+        final double[] CameraZoom = new double[1];
+        mMap.setOnMapLoadedCallback(new GoogleMap.OnMapLoadedCallback() {
                 @Override
                 public void onMapLoaded() {
                     CameraLat[0] = mMap.getCameraPosition().target.latitude;
@@ -1062,15 +1100,17 @@ public class MapsActivity extends AppCompatActivity
                     currentCameraLat = CameraLat[0];
                     currentCameraLon = CameraLon[0];
                     currentCameraZoom = CameraZoom[0];
-                    Manager m = new Manager(getEmail(),Double.toString(CameraLat[0]),Double.toString(CameraLon[0]),Double.toString(CameraZoom[0]));
-                    ManagerCameraReferenece.setValue(m);
+                    if(isManager){
+                        Manager m = new Manager(getEmail(),Double.toString(CameraLat[0]),Double.toString(CameraLon[0]),Double.toString(CameraZoom[0]));
+                        ManagerCameraReferenece.setValue(m);
+                    }
                 }
-            });
-        }
+        });
+
     }
 
 
-
+    //附近地點查詢相關實作
     private class TransTask extends AsyncTask<String, Void, String>{
 
         @Override
@@ -1250,8 +1290,7 @@ public class MapsActivity extends AppCompatActivity
         }
     }
 
-    //0815
-
+    //取得中心點的實作
     public void getcenterpoint(){
         //final LatLng[] centerpoint = new LatLng[1];
         final double[] lat = {0.0};
@@ -1308,6 +1347,7 @@ public class MapsActivity extends AppCompatActivity
 
     }
     // TODO: NV_r menu setting
+    //右側導覽列實作
     private void setUpNpitem(){
 
         NP_NV.setNavigationItemSelectedListener(new NavigationView.OnNavigationItemSelectedListener() {
@@ -1371,6 +1411,7 @@ public class MapsActivity extends AppCompatActivity
         });
     }
 
+    //右側導覽列-聊天室成員列表實作
     private void setchatmembermenu(){
         Menu menu = NVr.getMenu();
         menu.clear();
@@ -1481,13 +1522,7 @@ public class MapsActivity extends AppCompatActivity
                         UMkrNumLimit--;
                     }
                 }
-                //Log.i("Lat",user.Lat);
 
-               /* Marker currentMarker = markersList.get(arrsize);
-                                     LatLng lat = currentMarker.getPosition();
-                                      Log.i("Lat",Double.toString(lat.latitude));
-                                      arrsize++;
-                                      */
                 // [END_EXCLUDE]
             }
 
@@ -1769,14 +1804,27 @@ public class MapsActivity extends AppCompatActivity
     public void change_usersetting(boolean b){
         TinyDB tinydb;
         tinydb = new TinyDB(this);
-
-        if(b){
-            User_MapSettings UserMapSettings = new User_MapSettings(getEmail(),"true");
-            tinydb.putObject("UserMapSettings",UserMapSettings);
+        User_MapSettings Ums = (User_MapSettings) tinydb.getObject("UserMapSettings",User_MapSettings.class);
+        String lat = Ums.getCurrentCameraLat();
+        String lon = Ums.getCurrentCameraLon();
+        String zoom = Ums.getCurrentCameraZoom();
+        if(lat == null || lon == null || zoom == null) {
+            if (b) {
+                User_MapSettings UserMapSettings = new User_MapSettings(getEmail(), "true");
+                tinydb.putObject("UserMapSettings", UserMapSettings);
+            } else {
+                User_MapSettings UserMapSettings = new User_MapSettings(getEmail(), "false");
+                tinydb.putObject("UserMapSettings", UserMapSettings);
+            }
         }
         else{
-            User_MapSettings UserMapSettings = new User_MapSettings(getEmail(),"false");
-            tinydb.putObject("UserMapSettings",UserMapSettings);
+            if (b) {
+                User_MapSettings UserMapSettings = new User_MapSettings(getEmail(), "true",lat,lon,zoom);
+                tinydb.putObject("UserMapSettings", UserMapSettings);
+            } else {
+                User_MapSettings UserMapSettings = new User_MapSettings(getEmail(), "false",lat,lon,zoom);
+                tinydb.putObject("UserMapSettings", UserMapSettings);
+            }
         }
     }
 
