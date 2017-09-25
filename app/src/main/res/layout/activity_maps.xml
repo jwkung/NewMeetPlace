@@ -46,22 +46,24 @@
         app:layout_constraintRight_toRightOf="parent">
 
         <RelativeLayout
-            android:layout_width="0dp"
+            android:layout_width="20dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:padding="@dimen/fab_margin">
 
             <ImageView
                 android:id="@+id/pic"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:layout_alignParentEnd="true"
+                android:layout_alignParentTop="true"
                 android:scaleType="fitCenter"
                 android:src="@drawable/add" />
 
         </RelativeLayout>
 
         <RelativeLayout
-            android:layout_width="0dp"
+            android:layout_width="20dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:padding="@dimen/fab_margin">
