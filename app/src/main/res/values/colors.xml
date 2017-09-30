@@ -35,7 +35,7 @@
     <color name="folder_pink_dark_fav">#A64275</color>
     <color name="folder_pink_light_fav">#E478AB</color>
     <color name="folder_orange_dark_image">#926542</color>
-    <color name="folder_orange_light_image">#90715C</color>
+    <color name="folder_orange_light_image">#90715c</color>
     <color name="folder_yellow_dark_video">#817645</color>
     <color name="folder_yellow_light_video">#877F5E</color>
     <color name="folder_green_dark_music">#395442</color>
@@ -130,11 +130,17 @@
     <color name="burstblue">#0099cc</color>
     <color name="orangeb">#f0780f</color>
     <color name="orangec">#f4c36e</color>
-    <color name="GJ">#d6ccf4f6</color>
+    <color name="GJ">#96ccf4f6</color>
     <color name="bblue">#0b7bf4</color>
     <color name="GJ_orange">#60f2cb98</color>
     <color name="GJJOrange">#e98923</color>
     <color name="GJ_blue">#a763a9ef</color>
-    <color name="chatroom_bk">#76d3f1fb</color>
+    <color name="chatroom_bk">#86beaa99</color>
     <color name="infowindowtextcolor">#238ffa</color>
+    <color name="L_header_txv">#867f4f24</color>
+    <color name="L_header_text">#dad5ce</color>
+    <color name="nav_bd">#f3e7d9</color>
+    <color name="nvtext">#755b42</color>
+    <color name="primary_text_material_light">#867f4f24</color>
+    <color name="primary_text_default_material_light">#867f4f24</color>
 </resources>

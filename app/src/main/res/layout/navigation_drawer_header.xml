@@ -3,25 +3,29 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="150dp"
+    android:background="@drawable/l_header_bd"
     android:gravity="center"
-    android:orientation="horizontal"
-    android:background="@drawable/bk">
+    android:orientation="vertical">
 
     <ImageView
         android:id="@+id/Iv"
-        android:layout_width="match_parent"
+        android:layout_width="70dp"
         android:layout_height="70dp"
-        android:layout_weight="4"
+        android:layout_gravity="left"
+        android:layout_marginBottom="10dp"
+        android:layout_marginLeft="10dp"
         android:src="@drawable/ch" />
 
     <TextView
         android:id="@+id/navigation_header_userID"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:background="@color/GJ"
+        android:layout_marginLeft="8dp"
+        android:layout_marginRight="8dp"
+        android:background="@color/L_header_txv"
+        android:padding="3dp"
         android:textAppearance="?android:attr/textAppearanceMedium"
-        android:textColor="@color/bblue"
+        android:textColor="@color/L_header_text"
         android:textSize="18sp"
         android:textStyle="bold" />
 </LinearLayout>

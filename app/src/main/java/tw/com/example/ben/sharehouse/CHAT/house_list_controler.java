@@ -64,6 +64,7 @@ public class house_list_controler extends Fragment {
             public void onItemClick(AdapterView<?> parent, final View view, int position, long id) {
                 TextView chat = (TextView) view.findViewById(R.id.chat);
                 final String Tochat = chat.getText().toString();//聊天室url
+                Log.i("url",Tochat);
                 try{
                     Firebase chatroomfirebaseurl = new Firebase(Tochat);
                     ValueEventListener postListener = new ValueEventListener() {

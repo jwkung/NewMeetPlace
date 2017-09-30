@@ -35,12 +35,12 @@
         android:layout_width="240dp"
         android:layout_height="match_parent"
         android:layout_gravity="start"
-        android:background="@android:color/white"
+        android:background="@color/nav_bd"
         android:choiceMode="singleChoice"
         android:divider="@android:color/transparent"
         android:dividerHeight="0dp"
         app:headerLayout="@layout/navigation_drawer_header"
-        app:itemTextColor="@android:color/black"
+        app:itemTextColor="@color/nvtext"
         app:menu="@menu/menu_navigation" />
     <!-- The navigation drawer -->
     <android.support.design.widget.NavigationView
@@ -48,13 +48,13 @@
         android:layout_width="240dp"
         android:layout_height="match_parent"
         android:layout_gravity="end"
-        android:background="@android:color/white"
+        android:background="@color/nav_bd"
         android:choiceMode="singleChoice"
         android:divider="@android:color/transparent"
         android:dividerHeight="0dp"
         app:elevation="0dp"
         app:headerLayout="@layout/navigation_drawer_r_header"
-        app:itemTextColor="@android:color/black"
+        app:itemTextColor="@color/nvtext"
         app:menu="@menu/nearplaceitem">
 
     </android.support.design.widget.NavigationView>

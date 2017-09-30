@@ -2,20 +2,23 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="70dp"
-    android:background="@drawable/nvr_bg"
-    android:gravity="center"
-    android:orientation="horizontal">
+    android:layout_height="100dp"
+    android:background="@drawable/r_header_bd"
+    android:gravity="center">
 
     <TextView
         android:id="@+id/nv_contact_name"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="40dp"
+        android:layout_marginLeft="8dp"
+        android:layout_marginRight="8dp"
         android:layout_weight="1"
-        android:background="@color/GJ_blue"
+        android:background="@color/L_header_txv"
+        android:padding="3dp"
         android:textAlignment="center"
         android:textAppearance="?android:attr/textAppearanceMedium"
-        android:textColor="@color/blue_ocean"
-        android:textSize="24sp"
-        android:textStyle="bold" />
+        android:textColor="@color/L_header_text"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        tools:text="15" />
 </LinearLayout>
