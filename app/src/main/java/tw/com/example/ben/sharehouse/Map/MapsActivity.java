@@ -129,12 +129,14 @@ public class MapsActivity extends AppCompatActivity
     private DatabaseReference mUMkrReference;//資料庫存取路徑-自訂標記
     private DatabaseReference NearplaceReference;//資料庫存取路徑-附近地點結果資料
     private DatabaseReference CenterpointReference;//資料庫存取路徑-中心點位置
+    private DatabaseReference SearchmkrReference;//資料存取路徑-搜尋標記位置
     private DatabaseReference ManagerCameraReferenece;//資料庫存取路徑-聊天室管理者相機位置資料
     private DatabaseReference ManagerMarkerReferenece;//資料庫存取路徑-聊天室管理者同步畫面資料
     private ChildEventListener mChildEventListener,mUMkraddChildEventListener ;//資料庫變動監聽事件(使用者位置/自訂標記)
     private ChildEventListener mNearPlaceChildEventListener;//資料庫變動監聽事件(附近地點結果資料)
     private ValueEventListener mManagerValueEventListener;//資料庫變動監聽事件(聊天室管理者資料)
     private ValueEventListener mCenterPointListener;//資料庫變動監聽事件(中心點位置資料)
+    private ValueEventListener mSearchmkrListener;//資料庫變動監聽事件(搜尋標記資料)
     private ValueEventListener mFollowMarkerValueEventListener;
     public List<Marker> markersList,UmarkerList;//(使用者位置/自訂標記)List
     public List<String> chatmember;//聊天室成員List
@@ -287,6 +289,7 @@ public class MapsActivity extends AppCompatActivity
             ManagerCameraReferenece = MapDatabase.getReference().child(Chatroom_Key).child("Manager").child("Camera");
             ManagerMarkerReferenece = MapDatabase.getReference().child(Chatroom_Key).child("Manager").child("ClickedMarker");
             CenterpointReference = MapDatabase.getReference().child(Chatroom_Key).child("CenterPoint");
+            SearchmkrReference = MapDatabase.getReference().child(Chatroom_Key).child("SearchMarker");
             mFirebaseStorage = FirebaseStorage.getInstance();
             mChatPhotosStorageReferenece = mFirebaseStorage.getReference().child("chat_photos");
             check_manager();//檢查誰是管理員
@@ -296,6 +299,7 @@ public class MapsActivity extends AppCompatActivity
             set_usersetting();//使用者設定-是否開啟同步位置
             set_nearplace_mkr();//附近地點標記監聽實作-追隨模式
             set_center_mkr();//中心點位置監聽實作-追隨模式
+            set_search_mkr();//搜尋標記監聽實作-追隨模式
             set_followmkr();//標記同步顯示-追隨模式
 
 
@@ -463,7 +467,7 @@ public class MapsActivity extends AppCompatActivity
             public View getInfoWindow(Marker marker)
             {
                 View infoWindow;
-               if(marker.getTag() == "nearplace"){
+               if(marker.getTag() == "nearplace"|| marker.getTag() == "searchmarker"){
                    infoWindow = getLayoutInflater().inflate(R.layout.custom_info_contents,
                            (FrameLayout)findViewById(R.id.map), false);
                }
@@ -806,6 +810,9 @@ public class MapsActivity extends AppCompatActivity
         if(mFollowMarkerValueEventListener != null){
             ManagerMarkerReferenece.removeEventListener(mFollowMarkerValueEventListener);
         }
+        if(mSearchmkrListener != null){
+            SearchmkrReference.removeEventListener(mSearchmkrListener);
+        }
 
     }
 
@@ -902,6 +909,10 @@ public class MapsActivity extends AppCompatActivity
             }
             else if(Objects.equals(marker.getTag(), "Centermarker")){
                 Sharedata sd = new Sharedata("Centermarker","NULL");
+                ManagerMarkerReferenece.setValue(sd);
+            }
+            else if(Objects.equals(marker.getTag(), "searchmarker")){
+                Sharedata sd = new Sharedata("searchmarker","NULL");
                 ManagerMarkerReferenece.setValue(sd);
             }
             else{
@@ -1303,6 +1314,19 @@ public class MapsActivity extends AppCompatActivity
                 if (mkrop != null){
                     toolbartxv.setText(mkrop.getTitle());
                     searchexec = false;
+                    searchmarker = mMap.addMarker(mkrop);
+                    searchmarker.setTag("searchmarker");
+                    searchmarker.setIcon(BitmapDescriptorFactory.defaultMarker(200));
+                    mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
+                            new LatLng(searchmarker.getPosition().latitude,
+                                    searchmarker.getPosition().longitude), DEFAULT_ZOOM)
+                    );
+                    searchmarker.showInfoWindow();
+                    if (isManager) {
+                        Nearplace n = new Nearplace(searchmarker.getTitle(), searchmarker.getSnippet()
+                                , String.valueOf(searchmarker.getPosition().latitude), String.valueOf(searchmarker.getPosition().longitude));
+                       SearchmkrReference.setValue(n);
+                    }
                 }
             }
 
@@ -1537,6 +1561,13 @@ public class MapsActivity extends AppCompatActivity
                         );
                         mkr.showInfoWindow();
                     }
+                    else if (cp == 4){
+                        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
+                                new LatLng(searchmarker.getPosition().latitude,
+                                       searchmarker.getPosition().longitude),DEFAULT_ZOOM)
+                        );
+                        searchmarker.showInfoWindow();
+                    }
                     DL.closeDrawer(Gravity.END);
                 }
 
@@ -1588,6 +1619,13 @@ public class MapsActivity extends AppCompatActivity
                         );
                         mkr.showInfoWindow();
                     }
+                    else if (cp == 4){
+                        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
+                                new LatLng(searchmarker.getPosition().latitude,
+                                        searchmarker.getPosition().longitude),DEFAULT_ZOOM)
+                        );
+                        searchmarker.showInfoWindow();
+                    }
                     DL.closeDrawer(Gravity.END);
                 }
                 return false;
@@ -1610,8 +1648,9 @@ public class MapsActivity extends AppCompatActivity
                 Marker mkr = UmarkerList.get(i);
                 menu.add(3,i,Menu.NONE,mkr.getTitle());
             }
-
-
+        }
+        if(searchmarker != null){
+            menu.add(4,0,Menu.NONE,searchmarker.getTitle());
         }
     }
 
@@ -2170,6 +2209,10 @@ public class MapsActivity extends AppCompatActivity
                     if(Objects.equals(sd.Markertype, "Centermarker")){
                         centermarker.showInfoWindow();
                     }
+                    if(Objects.equals(sd.Markertype, "searchmarker")){
+                        searchmarker.showInfoWindow();
+                    }
+
                 }
             }
 
@@ -2183,6 +2226,35 @@ public class MapsActivity extends AppCompatActivity
         mFollowMarkerValueEventListener=FollowMarkerEventListener;
 
 
+    }
+    private void set_search_mkr(){
+        ValueEventListener SearchMarkerEventListener = new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                if (isfollowmode) {
+                    Nearplace searchmkr = dataSnapshot.getValue(Nearplace.class);
+                    if (searchmkr != null) {
+                        if (searchmarker != null) {
+                            searchmarker.remove();
+                        }
+                        searchmarker = mMap.addMarker(new MarkerOptions().position(new LatLng(Double.parseDouble(searchmkr.lat),Double.parseDouble(searchmkr.lon)))
+                                .title(searchmkr.title)
+                                .snippet(searchmkr.vicinity)
+                                .icon(BitmapDescriptorFactory.defaultMarker(200))
+                                .draggable(false));
+                        searchmarker.setTag("searchmarker");
+                    }
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                // Getting Post failed, log a message
+                // ...
+            }
+        };
+         SearchmkrReference.addValueEventListener(SearchMarkerEventListener);
+         mSearchmkrListener= SearchMarkerEventListener;
     }
 
 
