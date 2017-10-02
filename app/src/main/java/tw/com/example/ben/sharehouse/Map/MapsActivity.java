@@ -42,15 +42,12 @@ import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesNotAvailableException;
 import com.google.android.gms.common.GooglePlayServicesRepairableException;
 import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.places.Place;
-import com.google.android.gms.location.places.PlaceBuffer;
 import com.google.android.gms.location.places.Places;
 import com.google.android.gms.location.places.ui.PlaceAutocomplete;
-import com.google.android.gms.location.places.ui.PlaceAutocompleteFragment;
 import com.google.android.gms.location.places.ui.PlaceSelectionListener;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -89,6 +86,7 @@ import java.util.Calendar;
 import java.util.List;
 import java.util.Objects;
 
+import tw.com.example.ben.sharehouse.CHAT.ChatApplication;
 import tw.com.example.ben.sharehouse.CHAT.FirebaseListAdapter;
 import tw.com.example.ben.sharehouse.CHAT.dataModel.Chat;
 import tw.com.example.ben.sharehouse.CHAT.dataModel.MyUser;
@@ -180,6 +178,8 @@ public class MapsActivity extends AppCompatActivity
     private TextView toolbartxv;
     private ScrollView bar_scrollvw;
     int PLACE_AUTOCOMPLETE_REQUEST_CODE = 111;
+
+    ChatApplication GV;
 
 
     // TODO: OnCreate
@@ -1115,8 +1115,13 @@ public class MapsActivity extends AppCompatActivity
     //上方ToolBar實作
     public void setUpToolBar() {
         //setSupportActionBar(toolbar);
+        GV = (ChatApplication) this.getApplicationContext();
+        String name = GV.getChatName();
+        //setSupportActionBar(toolbar);
         //toolbar.setLogo(R.mipmap.ic_launcher);//设置app logo
-        toolbar.setTitle(TollBarTitle[0]);//设置主標题
+        toolbar.setTitle(name);
+        //toolbar.setLogo(R.mipmap.ic_launcher);//设置app logo
+        //toolbar.setTitle(TollBarTitle[0]);//设置主標题
         toolbar.setNavigationOnClickListener(new View.OnClickListener(){
             @Override
             public void onClick(View view) {

@@ -25,8 +25,6 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.Query;
 
-import java.util.Map;
-
 import tw.com.example.ben.sharehouse.CHAT.dataModel.House;
 import tw.com.example.ben.sharehouse.CHAT.dataModel.MyUser;
 import tw.com.example.ben.sharehouse.Map.MapsActivity;
@@ -63,6 +61,40 @@ public class house_list_controler extends Fragment {
             @Override
             public void onItemClick(AdapterView<?> parent, final View view, int position, long id) {
                 TextView chat = (TextView) view.findViewById(R.id.chat);
+                String Key = chat.getText().toString();
+                FirebaseDatabase db = FirebaseDatabase.getInstance();
+                final DatabaseReference Ref= db.getReference();
+                Query deleteQuery = Ref.child("houses").orderByChild("chat").equalTo(Key);
+                deleteQuery.addChildEventListener(new ChildEventListener() {
+                    @Override
+                    public void onChildAdded(DataSnapshot dataSnapshot, String s) {
+                        if (dataSnapshot.exists()){
+                            GV.setChatName(dataSnapshot.child("name").getValue().toString());
+                            Log.e("Chat","ChatNameFind"+GV.getChatName());
+                        }
+                    }
+
+                    @Override
+                    public void onChildChanged(DataSnapshot dataSnapshot, String s) {
+
+                    }
+
+                    @Override
+                    public void onChildRemoved(DataSnapshot dataSnapshot) {
+
+                    }
+
+                    @Override
+                    public void onChildMoved(DataSnapshot dataSnapshot, String s) {
+
+                    }
+
+                    @Override
+                    public void onCancelled(DatabaseError databaseError) {
+
+                    }
+                });
+
                 final String Tochat = chat.getText().toString();//聊天室url
                 Log.i("url",Tochat);
                 try{
