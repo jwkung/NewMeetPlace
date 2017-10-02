@@ -33,15 +33,25 @@ import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.ListView;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.firebase.client.Firebase;
 import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GooglePlayServicesNotAvailableException;
+import com.google.android.gms.common.GooglePlayServicesRepairableException;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.ResultCallback;
+import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.places.Place;
+import com.google.android.gms.location.places.PlaceBuffer;
 import com.google.android.gms.location.places.Places;
+import com.google.android.gms.location.places.ui.PlaceAutocomplete;
+import com.google.android.gms.location.places.ui.PlaceAutocompleteFragment;
+import com.google.android.gms.location.places.ui.PlaceSelectionListener;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -49,6 +59,7 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.tasks.OnSuccessListener;
@@ -92,7 +103,7 @@ public class MapsActivity extends AppCompatActivity
         implements OnMapReadyCallback,GoogleMap.OnMarkerDragListener,GoogleMap.OnMarkerClickListener,
         GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener, com.google.android.gms.location.LocationListener,
-        GoogleMap.OnInfoWindowClickListener,GoogleMap.OnCameraIdleListener,GoogleMap.OnInfoWindowLongClickListener {
+        GoogleMap.OnInfoWindowClickListener,GoogleMap.OnCameraIdleListener,GoogleMap.OnInfoWindowLongClickListener,PlaceSelectionListener {
 
     private static final String TAG = MapsActivity.class.getSimpleName();
     private GoogleMap mMap;
@@ -152,6 +163,7 @@ public class MapsActivity extends AppCompatActivity
     int page;
     LatLng centerpoint;
     private Marker centermarker;
+    private Marker searchmarker;
     private FirebaseDatabase MapDatabase;
     private ImageView send ,addpic ,chat;
     private NavigationView NVr;
@@ -163,6 +175,11 @@ public class MapsActivity extends AppCompatActivity
     public Boolean isManager,isfollowmode;
     private StorageReference mChatPhotosStorageReferenece;
     private FirebaseStorage mFirebaseStorage;
+    private boolean issearch,searchexec;
+    private Menu toolbarmenu;
+    private TextView toolbartxv;
+    private ScrollView bar_scrollvw;
+    int PLACE_AUTOCOMPLETE_REQUEST_CODE = 111;
 
 
     // TODO: OnCreate
@@ -188,6 +205,8 @@ public class MapsActivity extends AppCompatActivity
                 .addApi(Places.PLACE_DETECTION_API)
                 .build();
         mGoogleApiClient.connect();
+
+
         //地圖資料庫路徑
         FirebaseApp app = FirebaseApp.getInstance("MapRtDb");
         MapDatabase = FirebaseDatabase.getInstance(app);
@@ -206,6 +225,10 @@ public class MapsActivity extends AppCompatActivity
         mMessageEditText = (EditText) findViewById( R.id.messageInput) ;
         isfollowmode = false;
         isManager = false;
+        issearch = false;
+        searchexec =false;
+        toolbartxv = (TextView) findViewById(R.id.toolbar_txv);
+        bar_scrollvw=(ScrollView)findViewById(R.id.bar_scrollvw);
         //檢查使用者是否存在(有無登入)
         if(currentUser==null ){
             Intent intent = new Intent();
@@ -906,6 +929,7 @@ public class MapsActivity extends AppCompatActivity
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.menuu, menu);
+        toolbarmenu=menu;
         return true;
     }
     @Override
@@ -916,24 +940,61 @@ public class MapsActivity extends AppCompatActivity
             return true;
         }
         else if(id == R.id.addusermkr){
-            if (UMkrNumLimit > 0) {
-                // [START_EXCLUDE]
-                final double[] CameraLat = new double[1];
-                final double[] CameraLon = new double[1];
-                mMap.setOnMapLoadedCallback(new GoogleMap.OnMapLoadedCallback() {
-                    @Override
-                    public void onMapLoaded() {
-                        CameraLat[0] = mMap.getCameraPosition().target.latitude;
-                        CameraLon[0] = mMap.getCameraPosition().target.longitude;
-                        submitUmkrlocation(Double.toString(CameraLat[0]), Double.toString(CameraLon[0]));
-                    }
-                });
-
+            if(issearch){
+                toolbarmenu.getItem(1).setIcon(getResources().getDrawable(R.drawable.placeholder));
+                toolbarmenu.getItem(2).setVisible(true);
+                bar_scrollvw.setVisibility(View.GONE);
+                issearch = false;
             }
-            else{
-                Toast.makeText(MapsActivity.this, "標記已達上限，無法再增加!", Toast.LENGTH_LONG).show();
+            else {
+                if (UMkrNumLimit > 0) {
+                    // [START_EXCLUDE]
+                    final double[] CameraLat = new double[1];
+                    final double[] CameraLon = new double[1];
+                    mMap.setOnMapLoadedCallback(new GoogleMap.OnMapLoadedCallback() {
+                        @Override
+                        public void onMapLoaded() {
+                            CameraLat[0] = mMap.getCameraPosition().target.latitude;
+                            CameraLon[0] = mMap.getCameraPosition().target.longitude;
+                            submitUmkrlocation(Double.toString(CameraLat[0]), Double.toString(CameraLon[0]));
+                        }
+                    });
+
+                } else {
+                    Toast.makeText(MapsActivity.this, "標記已達上限，無法再增加!", Toast.LENGTH_LONG).show();
+                }
             }
             return true;
+        }
+        else if (id == R.id.search_place)
+        {
+            if(!issearch){
+                toolbarmenu.getItem(1).setIcon(getResources().getDrawable(R.drawable.cross));
+                toolbarmenu.getItem(2).setVisible(false);
+                bar_scrollvw.setVisibility(View.VISIBLE);
+                issearch = true;
+                try {
+                    Intent intent =
+                            new PlaceAutocomplete.IntentBuilder(PlaceAutocomplete.MODE_OVERLAY).setBoundsBias(new LatLngBounds(
+                                    new LatLng(21.9041171,120.85067879999997),
+                                    new LatLng(25.299229,121.53658900000005)))
+                                    .build(this);
+                    startActivityForResult(intent, PLACE_AUTOCOMPLETE_REQUEST_CODE);
+                } catch (GooglePlayServicesRepairableException | GooglePlayServicesNotAvailableException e) {
+                    // TODO: Handle the error.
+                }
+            }
+            else{
+                try {
+                    Intent intent =
+                            new PlaceAutocomplete.IntentBuilder(PlaceAutocomplete.MODE_OVERLAY)
+                                    .build(this);
+                    startActivityForResult(intent, PLACE_AUTOCOMPLETE_REQUEST_CODE);
+                } catch (GooglePlayServicesRepairableException | GooglePlayServicesNotAvailableException e) {
+                    // TODO: Handle the error.
+                }
+            }
+
         }
         return super.onOptionsItemSelected(item);
     }
@@ -1054,7 +1115,7 @@ public class MapsActivity extends AppCompatActivity
     //上方ToolBar實作
     public void setUpToolBar() {
         //setSupportActionBar(toolbar);
-        toolbar.setLogo(R.mipmap.ic_launcher);//设置app logo
+        //toolbar.setLogo(R.mipmap.ic_launcher);//设置app logo
         toolbar.setTitle(TollBarTitle[0]);//设置主標题
         toolbar.setNavigationOnClickListener(new View.OnClickListener(){
             @Override
@@ -1103,7 +1164,7 @@ public class MapsActivity extends AppCompatActivity
                 "&radius="+radius+"&sensor=true" +
                 "&types="+finplacetype+
                 "&language=zh-TW"+
-                "&key=AIzaSyAwcdfH7kgP5AJwS2NZdvDyot7TLnLh-A8";
+                "&key=AIzaSyDa5rahbohkWotgck3IDv6votMlBeMWzS8";
 
     }
     //附近地點搜尋結果中的下一頁URL
@@ -1111,7 +1172,7 @@ public class MapsActivity extends AppCompatActivity
 
         return  "https://maps.googleapis.com/maps/api/place/nearbysearch/json?"+
                 "pagetoken="+nxt+
-                "&key=AIzaSyAwcdfH7kgP5AJwS2NZdvDyot7TLnLh-A8";
+                "&key=AIzaSyDa5rahbohkWotgck3IDv6votMlBeMWzS8";
     }
 
     //地圖相機監聽事件實作
@@ -1136,6 +1197,14 @@ public class MapsActivity extends AppCompatActivity
                     }
                 }
         });
+
+    }
+
+    @Override
+    public void onPlaceSelected(Place place) {
+    }
+    @Override
+    public void onError(Status status) {
 
     }
 
@@ -1165,73 +1234,128 @@ public class MapsActivity extends AppCompatActivity
         protected void onPostExecute(String s) {
             super.onPostExecute(s);
             //Log.d("JSON", s);
-            parseJSON(s);
-            if(nearradius>=1000 && page == 1 && places.length<10){
-                nearradius += 1000;
-                String url = getDirectionsUrl(centerpoint, Integer.toString(nearradius));
-                new TransTask().execute(url);
-                return;
+            if(!searchexec) {
+                parseJSON(s);
+                if (nearradius >= 1000 && page == 1 && places.length < 10) {
+                    nearradius += 1000;
+                    String url = getDirectionsUrl(centerpoint, Integer.toString(nearradius));
+                    new TransTask().execute(url);
+                    return;
                 /*if(places.length < 1){
                     Toast.makeText(MapsActivity.this, "中心點附近無相關地點，請重新查詢", Toast.LENGTH_LONG).show();
                 }*/
 
+                } else if (page == 1 && places.length < 10) {
+                    nearradius += 250;
+                    String url = getDirectionsUrl(centerpoint, Integer.toString(nearradius));
+                    new TransTask().execute(url);
+                    return;
+                }
+                if (places != null && placeMarkers != null) {
+                    Log.i("len", Integer.toString(places.length));
+                    int p;
+                    int pagen = (page - 1) * 20;
+                    for (p = pagen; p < places.length + pagen && p < placeMarkers.length + pagen; p++) {
+                        //will be null if a value was missing
+                        if (places[p - pagen] != null) {
+                            placeMarkers[p] = mMap.addMarker(places[p - pagen]);
+                            placeMarkers[p].setTag("nearplace");
+                            NavigationView nv = (NavigationView) findViewById(R.id.Right_Navigation);
+                            final Menu menu = nv.getMenu();
+                            menu.add(0, p, p, placeMarkers[p].getTitle());
+                            if (isManager) {
+                                Nearplace n = new Nearplace(places[p - pagen].getTitle(), places[p - pagen].getSnippet()
+                                        , String.valueOf(places[p - pagen].getPosition().latitude), String.valueOf(places[p - pagen].getPosition().longitude));
+                                NearplaceReference.child(Integer.toString(p)).setValue(n);
+                            }
+
+                        }
+                    }
+                    nearplacenum = p;
+                }
+                while (nxtstring != null) {
+                    page++;
+                    sleep(2000);
+                    Log.i("Start next page", "123");
+                    String nxtpgeurl = nextpage(nxtstring);
+                    nxtstring = null;
+                    new TransTask().execute(nxtpgeurl);
+                }
+                Log.i("Radius", Integer.toString(nearradius));
+                if (nearradius <= 750)
+                    mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
+                            centerpoint, DEFAULT_ZOOM));
+                else if (nearradius == 1000)
+                    mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
+                            centerpoint, DEFAULT_ZOOM - 1));
+                else if (nearradius <= 3000)
+                    mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
+                            centerpoint, DEFAULT_ZOOM - 2));
+                else if (nearradius <= 6000)
+                    mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
+                            centerpoint, DEFAULT_ZOOM - 3));
+                else
+                    mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
+                            centerpoint, DEFAULT_ZOOM - 4));
             }
-            else if(page == 1 && places.length<10 )
-            {
-                nearradius += 250;
-                String url = getDirectionsUrl(centerpoint, Integer.toString(nearradius));
-                new TransTask().execute(url);
-                return;
+            else{
+               MarkerOptions mkrop=parsesearchplaceJSON(s);
+                if (mkrop != null){
+                    toolbartxv.setText(mkrop.getTitle());
+                    searchexec = false;
+                }
             }
-            if(places!=null && placeMarkers!=null){
-                Log.i("len",Integer.toString(places.length));
-                int p ;
-                int pagen = (page-1)*20;
-                for(p=pagen; p<places.length+pagen && p<placeMarkers.length+pagen; p++){
-                    //will be null if a value was missing
-                    if(places[p-pagen]!=null){
-                        placeMarkers[p]=mMap.addMarker(places[p-pagen]);
-                        placeMarkers[p].setTag("nearplace");
-                        NavigationView nv = (NavigationView) findViewById(R.id.Right_Navigation);
-                        final Menu menu = nv.getMenu();
-                        menu.add(0,p,p,placeMarkers[p].getTitle());
-                        if(isManager){
-                            Nearplace n = new Nearplace(places[p-pagen].getTitle(),places[p-pagen].getSnippet()
-                                    ,String.valueOf(places[p-pagen].getPosition().latitude),String.valueOf(places[p-pagen].getPosition().longitude));
-                            NearplaceReference.child(Integer.toString(p)).setValue(n);
+
+
+
+        }
+        private MarkerOptions parsesearchplaceJSON(String s){
+            try{
+                JSONObject resultObject = new JSONObject(s);
+                JSONObject result = resultObject.getJSONObject("result");
+                    //parse each place
+                    boolean missingValue;
+                    LatLng placeLL=null;
+                    String placeName="";
+                    String vicinity="";
+                    String rating="";
+                    try{
+                        //attempt to retrieve place data values
+                        missingValue=false;
+                        JSONObject loc = result.getJSONObject("geometry").getJSONObject("location");
+                        placeLL = new LatLng(
+                                Double.valueOf(loc.getString("lat")),
+                                Double.valueOf(loc.getString("lng")));
+                        vicinity = result.getString("formatted_address");
+                        placeName = result.getString("name");
+                        try{
+                            rating = result.getString("rating");
+                        }
+                        catch(Exception e){
+                            rating = "";
                         }
 
                     }
-                }
-                nearplacenum=p;
+                    catch(JSONException jse){
+                        missingValue=true;
+                        jse.printStackTrace();
+                    }
+                    if(missingValue)
+                        return null;
+
+                    else{
+                        return new MarkerOptions()
+                                .position(placeLL)
+                                .title(placeName)
+                                .snippet("地址: "+vicinity+"\n"+"評分: "+rating);
+                    }
+
+
             }
-            while(nxtstring!=null){
-                page++;
-                sleep(2000);
-                Log.i("Start next page","123");
-                String nxtpgeurl =nextpage(nxtstring);
-                nxtstring = null;
-                new TransTask().execute(nxtpgeurl);
+            catch (JSONException e) {
+                e.printStackTrace();
             }
-            Log.i("Radius",Integer.toString(nearradius));
-            if(nearradius<=750)
-                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
-                        centerpoint, DEFAULT_ZOOM));
-            else if(nearradius ==1000)
-                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
-                        centerpoint, DEFAULT_ZOOM-1));
-            else if(nearradius <=3000)
-                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
-                        centerpoint, DEFAULT_ZOOM-2));
-            else if(nearradius <=6000)
-                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
-                        centerpoint, DEFAULT_ZOOM-3));
-            else
-                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
-                        centerpoint, DEFAULT_ZOOM-4));
-
-
-
+            return null;
         }
         private void parseJSON(String s) {
             try {
@@ -1963,6 +2087,31 @@ public class MapsActivity extends AppCompatActivity
                 }
             });
         }
+        else if (requestCode == PLACE_AUTOCOMPLETE_REQUEST_CODE) {
+            if (resultCode == RESULT_OK) {
+                Place place = PlaceAutocomplete.getPlace(this, data);
+                String searchplaceuri =set_search_place_url(place.getId());
+                searchexec = true;
+                new TransTask().execute(searchplaceuri);
+                //toolbartxv.setText(place.getName());
+            } else if (resultCode == PlaceAutocomplete.RESULT_ERROR) {
+                Status status = PlaceAutocomplete.getStatus(this, data);
+                // TODO: Handle the error.
+                Log.i(TAG, status.getStatusMessage());
+
+            } else if (resultCode == RESULT_CANCELED) {
+                // The user canceled the operation.
+                Log.i(TAG,"cancel");
+            }
+        }
+    }
+
+    private String set_search_place_url(String placeid) {
+                return "https://maps.googleapis.com/maps/api/place/details/json?" +
+                        "placeid="+placeid+
+                        "&language=zh-TW"+
+                        "&key=AIzaSyDa5rahbohkWotgck3IDv6votMlBeMWzS8";
+
     }
 
     private void set_center_mkr(){

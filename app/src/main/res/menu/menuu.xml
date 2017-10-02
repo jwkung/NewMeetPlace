@@ -13,11 +13,22 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
+        android:id="@+id/search_place"
+        android:enabled="true"
+        android:icon="@drawable/search"
+        android:title="search_place"
+        app:showAsAction="ifRoom" />
+    <item
         android:id="@+id/addusermkr"
+        android:enabled="true"
         android:icon="@drawable/placeholder"
+        android:title="addusermkr"
         app:showAsAction="ifRoom" />
     <item
         android:id="@+id/btn_rnvdrawer"
+        android:enabled="true"
         android:icon="@drawable/more"
+        android:title="btn_rnvdrawer"
         app:showAsAction="ifRoom" />
+
 </menu>
