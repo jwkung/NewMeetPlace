@@ -10,6 +10,7 @@ public class Manager {
     public String Camerapos_lat;
     public String Camerapos_lon;
     public String Camerapos_zoom;
+    public boolean fab_check;
 
     public Manager(){}
     public Manager(String s,String lat,String lon,String zoom){
@@ -17,6 +18,7 @@ public class Manager {
         this.Camerapos_lat = lat;
         this.Camerapos_lon = lon;
         this.Camerapos_zoom = zoom;
+        this.fab_check = false;
     }
 
 }

@@ -130,6 +130,7 @@ public class MapsActivity extends AppCompatActivity
     private DatabaseReference SearchmkrReference;//資料存取路徑-搜尋標記位置
     private DatabaseReference ManagerCameraReferenece;//資料庫存取路徑-聊天室管理者相機位置資料
     private DatabaseReference ManagerMarkerReferenece;//資料庫存取路徑-聊天室管理者同步畫面資料
+    private DatabaseReference ManagerFlagReference;//資料庫存取路徑-聊天室管理者Flag
     private ChildEventListener mChildEventListener,mUMkraddChildEventListener ;//資料庫變動監聽事件(使用者位置/自訂標記)
     private ChildEventListener mNearPlaceChildEventListener;//資料庫變動監聽事件(附近地點結果資料)
     private ValueEventListener mManagerValueEventListener;//資料庫變動監聽事件(聊天室管理者資料)
@@ -180,6 +181,7 @@ public class MapsActivity extends AppCompatActivity
     private TextView toolbartxv;
     private ScrollView bar_scrollvw;
     int PLACE_AUTOCOMPLETE_REQUEST_CODE = 111;
+    FloatingActionButton fabtest;
 
     ChatApplication GV;
 
@@ -288,6 +290,7 @@ public class MapsActivity extends AppCompatActivity
             NearplaceReference = MapDatabase.getReference().child(Chatroom_Key).child("Nearplace");
             ManagerCameraReferenece = MapDatabase.getReference().child(Chatroom_Key).child("Manager").child("Camera");
             ManagerMarkerReferenece = MapDatabase.getReference().child(Chatroom_Key).child("Manager").child("ClickedMarker");
+            ManagerFlagReference    = MapDatabase.getReference().child(Chatroom_Key).child("Manager").child("Camera").child("fab_check");
             CenterpointReference = MapDatabase.getReference().child(Chatroom_Key).child("CenterPoint");
             SearchmkrReference = MapDatabase.getReference().child(Chatroom_Key).child("SearchMarker");
             mFirebaseStorage = FirebaseStorage.getInstance();
@@ -301,6 +304,21 @@ public class MapsActivity extends AppCompatActivity
             set_center_mkr();//中心點位置監聽實作-追隨模式
             set_search_mkr();//搜尋標記監聽實作-追隨模式
             set_followmkr();//標記同步顯示-追隨模式
+
+            //fabtest
+            fabtest = (FloatingActionButton) findViewById( R.id.fab);
+            fabtest.hide();
+
+            fabtest.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if(isManager){
+                        ManagerFlagReference.setValue(true);
+                    }else{
+
+                    }
+                }
+            });
 
 
 
@@ -390,8 +408,20 @@ public class MapsActivity extends AppCompatActivity
             }
         });
 
-    }
+        ManagerFlagReference.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                if( dataSnapshot.getValue() == "true" ){
+                    fabtest.show();
+                }
+            }
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
 
+            }
+        });
+
+    }
 
 
     /**
@@ -507,7 +537,7 @@ public class MapsActivity extends AppCompatActivity
         mMap.setOnInfoWindowLongClickListener(this);
         mMap.setOnCameraIdleListener(this);
         //mMap.setOnCameraMoveStartedListener(this);
-       // mMap.setOnCameraMoveListener(this);
+        //mMap.setOnCameraMoveListener(this);
         //mMap.setOnCameraMoveCanceledListener(this);
 
     }
@@ -1976,6 +2006,7 @@ public class MapsActivity extends AppCompatActivity
                 }
                 else {
                     if( getEmail().equals(m.manager_email)) {
+                        fabtest.show();
                         isManager = true;
                         Toast.makeText(getApplicationContext(),"Manger", Toast.LENGTH_SHORT).show();
                         Menu menu = NV.getMenu();
