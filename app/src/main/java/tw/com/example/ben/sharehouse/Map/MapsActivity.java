@@ -10,6 +10,9 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.LayoutRes;
 import android.support.annotation.NonNull;
+import android.support.constraint.ConstraintLayout;
+import android.support.constraint.ConstraintSet;
+import android.support.design.widget.CoordinatorLayout;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.NavigationView;
 import android.support.v4.app.ActivityCompat;
@@ -128,8 +131,8 @@ public class MapsActivity extends AppCompatActivity
     private DatabaseReference NearplaceReference;//資料庫存取路徑-附近地點結果資料
     private DatabaseReference CenterpointReference;//資料庫存取路徑-中心點位置
     private DatabaseReference SearchmkrReference;//資料存取路徑-搜尋標記位置
-    private DatabaseReference ManagerCameraReferenece;//資料庫存取路徑-聊天室管理者相機位置資料
-    private DatabaseReference ManagerMarkerReferenece;//資料庫存取路徑-聊天室管理者同步畫面資料
+    private DatabaseReference ManagerCameraReference;//資料庫存取路徑-聊天室管理者相機位置資料
+    private DatabaseReference ManagerMarkerReference;//資料庫存取路徑-聊天室管理者同步畫面資料
     private DatabaseReference ManagerFlagReference;//資料庫存取路徑-聊天室管理者Flag
     private ChildEventListener mChildEventListener,mUMkraddChildEventListener ;//資料庫變動監聽事件(使用者位置/自訂標記)
     private ChildEventListener mNearPlaceChildEventListener;//資料庫變動監聽事件(附近地點結果資料)
@@ -137,6 +140,7 @@ public class MapsActivity extends AppCompatActivity
     private ValueEventListener mCenterPointListener;//資料庫變動監聽事件(中心點位置資料)
     private ValueEventListener mSearchmkrListener;//資料庫變動監聽事件(搜尋標記資料)
     private ValueEventListener mFollowMarkerValueEventListener;
+    private ValueEventListener mManagerFlagEventListener;
     public List<Marker> markersList,UmarkerList;//(使用者位置/自訂標記)List
     public List<String> chatmember;//聊天室成員List
     public List<String> placetype;//搜尋地點類型List
@@ -182,7 +186,7 @@ public class MapsActivity extends AppCompatActivity
     private ScrollView bar_scrollvw;
     int PLACE_AUTOCOMPLETE_REQUEST_CODE = 111;
     FloatingActionButton fabtest;
-
+    private boolean managerflag;
     ChatApplication GV;
 
 
@@ -231,6 +235,7 @@ public class MapsActivity extends AppCompatActivity
         isManager = false;
         issearch = false;
         searchexec =false;
+        managerflag = false;
         toolbartxv = (TextView) findViewById(R.id.toolbar_txv);
         bar_scrollvw=(ScrollView)findViewById(R.id.bar_scrollvw);
         //檢查使用者是否存在(有無登入)
@@ -288,9 +293,9 @@ public class MapsActivity extends AppCompatActivity
             nearradius = 250;
             //設定相關功能資料庫路徑
             NearplaceReference = MapDatabase.getReference().child(Chatroom_Key).child("Nearplace");
-            ManagerCameraReferenece = MapDatabase.getReference().child(Chatroom_Key).child("Manager").child("Camera");
-            ManagerMarkerReferenece = MapDatabase.getReference().child(Chatroom_Key).child("Manager").child("ClickedMarker");
-            ManagerFlagReference    = MapDatabase.getReference().child(Chatroom_Key).child("Manager").child("Camera").child("fab_check");
+            ManagerCameraReference = MapDatabase.getReference().child(Chatroom_Key).child("Manager").child("Camera");
+            ManagerMarkerReference = MapDatabase.getReference().child(Chatroom_Key).child("Manager").child("ClickedMarker");
+            ManagerFlagReference   = MapDatabase.getReference().child(Chatroom_Key).child("Manager").child("Flag");
             CenterpointReference = MapDatabase.getReference().child(Chatroom_Key).child("CenterPoint");
             SearchmkrReference = MapDatabase.getReference().child(Chatroom_Key).child("SearchMarker");
             mFirebaseStorage = FirebaseStorage.getInstance();
@@ -304,18 +309,21 @@ public class MapsActivity extends AppCompatActivity
             set_center_mkr();//中心點位置監聽實作-追隨模式
             set_search_mkr();//搜尋標記監聽實作-追隨模式
             set_followmkr();//標記同步顯示-追隨模式
+            set_manageflag();
 
-            //fabtest
             fabtest = (FloatingActionButton) findViewById( R.id.fab);
-            fabtest.hide();
-
             fabtest.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     if(isManager){
-                        ManagerFlagReference.setValue(true);
-                    }else{
-
+                        if(!managerflag){
+                            String s ="true";
+                            ManagerFlagReference.setValue(s);
+                        }
+                        else{
+                            String s ="false";
+                            ManagerFlagReference.setValue(s);
+                        }
                     }
                 }
             });
@@ -408,20 +416,8 @@ public class MapsActivity extends AppCompatActivity
             }
         });
 
-        ManagerFlagReference.addValueEventListener(new ValueEventListener() {
-            @Override
-            public void onDataChange(DataSnapshot dataSnapshot) {
-                if( dataSnapshot.getValue() == "true" ){
-                    fabtest.show();
-                }
-            }
-            @Override
-            public void onCancelled(DatabaseError databaseError) {
-
-            }
-        });
-
     }
+
 
 
     /**
@@ -829,7 +825,7 @@ public class MapsActivity extends AppCompatActivity
             }
         }
         if(mManagerValueEventListener!=null){
-            ManagerCameraReferenece.removeEventListener(mManagerValueEventListener);
+            ManagerCameraReference.removeEventListener(mManagerValueEventListener);
         }
         if(mNearPlaceChildEventListener != null){
             NearplaceReference.removeEventListener(mNearPlaceChildEventListener);
@@ -838,10 +834,13 @@ public class MapsActivity extends AppCompatActivity
             CenterpointReference.removeEventListener(mCenterPointListener);
         }
         if(mFollowMarkerValueEventListener != null){
-            ManagerMarkerReferenece.removeEventListener(mFollowMarkerValueEventListener);
+            ManagerMarkerReference.removeEventListener(mFollowMarkerValueEventListener);
         }
         if(mSearchmkrListener != null){
             SearchmkrReference.removeEventListener(mSearchmkrListener);
+        }
+        if(mManagerFlagEventListener !=null){
+            ManagerFlagReference.removeEventListener(mManagerFlagEventListener);
         }
 
     }
@@ -932,31 +931,31 @@ public class MapsActivity extends AppCompatActivity
                 for (int i = 0 ; i<nearplacenum;i++) {
                     if (Objects.equals(marker.getTitle(), placeMarkers[i].getTitle())) {
                         Sharedata sd = new Sharedata("nearplace",Integer.toString(i));
-                        ManagerMarkerReferenece.setValue(sd);
+                        ManagerMarkerReference.setValue(sd);
                         return false;
                     }
                 }
             }
             else if(Objects.equals(marker.getTag(), "Centermarker")){
                 Sharedata sd = new Sharedata("Centermarker","NULL");
-                ManagerMarkerReferenece.setValue(sd);
+                ManagerMarkerReference.setValue(sd);
             }
             else if(Objects.equals(marker.getTag(), "searchmarker")){
                 Sharedata sd = new Sharedata("searchmarker","NULL");
-                ManagerMarkerReferenece.setValue(sd);
+                ManagerMarkerReference.setValue(sd);
             }
             else{
                 for(int i =0;i<markersList.size();i++){
                     if(Objects.equals(marker.getTag(),markersList.get(i).getTag())){
                         Sharedata sd = new Sharedata("usermkr",String.valueOf(markersList.get(i).getTag()));
-                        ManagerMarkerReferenece.setValue(sd);
+                        ManagerMarkerReference.setValue(sd);
                         return false;
                     }
                 }
                 for(int i =0;i<UmarkerList.size();i++){
                     if(Objects.equals(marker.getTag(),UmarkerList.get(i).getTag())){
                         Sharedata sd = new Sharedata("Customizemkr",String.valueOf(UmarkerList.get(i).getTag()));
-                        ManagerMarkerReferenece.setValue(sd);
+                        ManagerMarkerReference.setValue(sd);
                         return false;
                     }
                 }
@@ -1239,7 +1238,7 @@ public class MapsActivity extends AppCompatActivity
                     currentCameraZoom = CameraZoom[0];
                     if(isManager){
                         Manager m = new Manager(getEmail(),Double.toString(CameraLat[0]),Double.toString(CameraLon[0]),Double.toString(CameraZoom[0]));
-                        ManagerCameraReferenece.setValue(m);
+                        ManagerCameraReference.setValue(m);
                     }
                 }
         });
@@ -1985,7 +1984,7 @@ public class MapsActivity extends AppCompatActivity
                 // ...
             }
         };
-        ManagerCameraReferenece.addValueEventListener(ManagerEventListener);
+        ManagerCameraReference.addValueEventListener(ManagerEventListener);
         mManagerValueEventListener = ManagerEventListener;
 
 
@@ -1998,7 +1997,7 @@ public class MapsActivity extends AppCompatActivity
                 Manager m = dataSnapshot.getValue(Manager.class);
                 if (m == null){
                     m = new Manager(getEmail(),"0.0","0.0","15");
-                    ManagerCameraReferenece.setValue(m);
+                    ManagerCameraReference.setValue(m);
                     isManager = true;
                     Menu menu = NV.getMenu();
                     MenuItem item = menu.findItem(R.id.followmode);
@@ -2006,8 +2005,9 @@ public class MapsActivity extends AppCompatActivity
                 }
                 else {
                     if( getEmail().equals(m.manager_email)) {
-                        fabtest.show();
+                        setfabvisible(true);
                         isManager = true;
+                        ManagerFlagReference.setValue("false");
                         Toast.makeText(getApplicationContext(),"Manger", Toast.LENGTH_SHORT).show();
                         Menu menu = NV.getMenu();
                         MenuItem item = menu.findItem(R.id.followmode);
@@ -2016,6 +2016,7 @@ public class MapsActivity extends AppCompatActivity
                     }
                     else{
                         isManager = false;
+                        setfabvisible(false);
                         Toast.makeText(getApplicationContext(),"Not Manger", Toast.LENGTH_SHORT).show();
                     }
                 }
@@ -2028,7 +2029,7 @@ public class MapsActivity extends AppCompatActivity
                 // ...
             }
         };
-        ManagerCameraReferenece.addListenerForSingleValueEvent(ManagerValueEventListener);
+        ManagerCameraReference.addListenerForSingleValueEvent(ManagerValueEventListener);
 
     }
     public  void  set_usersetting(){
@@ -2258,7 +2259,7 @@ public class MapsActivity extends AppCompatActivity
                 // ...
             }
         };
-        ManagerMarkerReferenece.addValueEventListener(FollowMarkerEventListener);
+        ManagerMarkerReference.addValueEventListener(FollowMarkerEventListener);
         mFollowMarkerValueEventListener=FollowMarkerEventListener;
 
 
@@ -2291,6 +2292,47 @@ public class MapsActivity extends AppCompatActivity
         };
          SearchmkrReference.addValueEventListener(SearchMarkerEventListener);
          mSearchmkrListener= SearchMarkerEventListener;
+    }
+
+    private void set_manageflag() {
+        ValueEventListener ManagerFlagEventListener=new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                String s = (String) dataSnapshot.getValue();
+                if (Objects.equals(s, "true")) {
+                    if(isManager){
+                        managerflag = true;
+                        return;
+                    }
+                    setfabvisible(true);
+                }
+                else {
+                    if(isManager){
+                        managerflag = false;
+                    }
+                    else {
+                        setfabvisible(false);
+                    }
+
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+
+            }
+        };
+        ManagerFlagReference.addValueEventListener(ManagerFlagEventListener);
+        mManagerFlagEventListener = ManagerFlagEventListener;
+    }
+    private void setfabvisible(Boolean b){
+        if (b){
+            fabtest.show();
+        }
+        else{
+            fabtest.hide();
+        }
+
     }
 
 
