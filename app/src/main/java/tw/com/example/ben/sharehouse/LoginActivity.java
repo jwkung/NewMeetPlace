@@ -3,7 +3,6 @@ package tw.com.example.ben.sharehouse;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
-import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
@@ -33,9 +32,6 @@ import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.GoogleAuthProvider;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
-
-import java.io.IOException;
-import java.util.List;
 
 import tw.com.example.ben.sharehouse.CHAT.dataModel.House;
 import tw.com.example.ben.sharehouse.CHAT.dataModel.MyUser;
@@ -69,6 +65,7 @@ public class LoginActivity extends AppCompatActivity implements GoogleApiClient.
         mainActivity = new Intent(this,MainActivity.class);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
+
         //初始資料庫  用於紀錄登入狀態   1為登陸  0為未登陸
         tinydb = new TinyDB(this);
         //先判斷用戶是否登陸
