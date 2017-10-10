@@ -188,6 +188,8 @@ public class MapsActivity extends AppCompatActivity
     FloatingActionButton fabtest;
     private boolean managerflag;
     ChatApplication GV;
+    private Marker finalplacemkr;
+    private String Manager_email,Manager_umkrkey;
 
 
     // TODO: OnCreate
@@ -315,18 +317,57 @@ public class MapsActivity extends AppCompatActivity
             fabtest.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    if(isManager){
-                        if(!managerflag){
-                            String s ="true";
-                            ManagerFlagReference.setValue(s);
+                    if(isManager&&finalplacemkr!=null){
+                        UserMkr umkr = new UserMkr(String.valueOf(finalplacemkr.getPosition().latitude),String.valueOf(finalplacemkr.getPosition().longitude)
+                                ,"Final Place",getEmail());
+                        if (Manager_umkrkey != null) {
+                            mUMkrReference.child(Manager_umkrkey).setValue(umkr);
+                            Toast.makeText(getApplicationContext(),"已設定最終目的地", Toast.LENGTH_SHORT).show();
                         }
                         else{
-                            String s ="false";
-                            ManagerFlagReference.setValue(s);
+                            mUMkrReference.push().setValue(umkr);
+                            Toast.makeText(getApplicationContext(),"已設定最終目的地", Toast.LENGTH_SHORT).show();
+                        }
+
+                    }
+                    else if(!isManager){
+                        int size=UmarkerList.size();
+                        for(int m=0 ; m < size; ++m) {
+                            Marker mkr;
+                            mkr = UmarkerList.get(m);
+                            String key = (String) mkr.getTag();
+                            if(key != null && key.equals(Manager_umkrkey)){
+                                mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(
+                                        new LatLng(mkr.getPosition().latitude,
+                                                mkr.getPosition().longitude),DEFAULT_ZOOM));
+                                mkr.showInfoWindow();
+                            }
+
                         }
                     }
                 }
             });
+            fabtest.setOnLongClickListener(new View.OnLongClickListener() {
+
+                @Override
+                public boolean onLongClick(View v) {
+                    if(isManager){
+                        if(!managerflag){
+                            String s ="true";
+                            ManagerFlagReference.setValue(s);
+                            Toast.makeText(getApplicationContext(),"開啟Fab標記給其他成員", Toast.LENGTH_SHORT).show();
+
+                        }
+                        else{
+                            String s ="false";
+                            ManagerFlagReference.setValue(s);
+                            Toast.makeText(getApplicationContext(),"關閉Fab標記給其他成員", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                    return true;
+                }
+            });
+
 
 
 
@@ -927,6 +968,7 @@ public class MapsActivity extends AppCompatActivity
     public boolean onMarkerClick(final Marker marker) {
         //如果是聊天室管理者，傳送自己點擊的標記，讓開啟追隨模式的成員自動同步點擊該標記
         if(isManager){
+            finalplacemkr = marker;
             if(Objects.equals(marker.getTag(), "nearplace")){
                 for (int i = 0 ; i<nearplacenum;i++) {
                     if (Objects.equals(marker.getTitle(), placeMarkers[i].getTitle())) {
@@ -1778,6 +1820,9 @@ public class MapsActivity extends AppCompatActivity
                     if(email.equals(usermkr.Email)){
                         UMkrNumLimit--;
                     }
+                    if(Manager_email!=null&&Manager_email.equals(usermkr.Email)){
+                        Manager_umkrkey = key;
+                    }
                 }
 
                 // [END_EXCLUDE]
@@ -1999,11 +2044,13 @@ public class MapsActivity extends AppCompatActivity
                     m = new Manager(getEmail(),"0.0","0.0","15");
                     ManagerCameraReference.setValue(m);
                     isManager = true;
+                    Manager_email=getEmail();
                     Menu menu = NV.getMenu();
                     MenuItem item = menu.findItem(R.id.followmode);
                     item.setVisible(false);
                 }
                 else {
+                    Manager_email = m.manager_email;
                     if( getEmail().equals(m.manager_email)) {
                         setfabvisible(true);
                         isManager = true;
