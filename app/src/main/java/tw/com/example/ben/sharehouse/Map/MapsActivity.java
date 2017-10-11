@@ -10,9 +10,6 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.LayoutRes;
 import android.support.annotation.NonNull;
-import android.support.constraint.ConstraintLayout;
-import android.support.constraint.ConstraintSet;
-import android.support.design.widget.CoordinatorLayout;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.NavigationView;
 import android.support.v4.app.ActivityCompat;
@@ -187,9 +184,11 @@ public class MapsActivity extends AppCompatActivity
     int PLACE_AUTOCOMPLETE_REQUEST_CODE = 111;
     FloatingActionButton fabtest;
     private boolean managerflag;
-    ChatApplication GV;
+    ChatApplication GV;  // Global Variable
     private Marker finalplacemkr;
     private String Manager_email,Manager_umkrkey;
+    private final double EARTH_RADIUS = 6378137.0;  // Distance paremeter
+    private double Distance; // Distance
 
 
     // TODO: OnCreate
@@ -1525,10 +1524,38 @@ public class MapsActivity extends AppCompatActivity
                         places[p]=null;
 
                     else{
-                        places[p]=new MarkerOptions()
-                                .position(placeLL)
-                                .title(placeName)
-                                .snippet("地址: "+vicinity+"\n"+"評分: "+rating);
+                        JSONObject placeObject = placesArray.getJSONObject(p);
+                        JSONObject loc = placeObject.getJSONObject("geometry").getJSONObject("location");
+                        Double mkr_lat = Double.valueOf(loc.getString("lat"));
+                        Double mkr_lng = Double.valueOf(loc.getString("lng"));
+                        Double user_lat = 0.0 ;
+                        Double user_lng = 0.0 ;
+                        int size=markersList.size();
+                        for(int m=0 ; m < size; ++m) {
+                            Marker mkr;
+                            mkr = markersList.get(m);
+                            String key = (String) mkr.getTitle();
+                            if(key != null && key.equals(getEmail())){
+                                user_lat = mkr.getPosition().latitude;
+                                user_lng = mkr.getPosition().longitude;
+                            }
+
+                        }
+                        Double Distance = DisConculate(user_lat,user_lng,mkr_lat,mkr_lng);
+
+                        if( Distance < 999.99 ){
+                            places[p]=new MarkerOptions()
+                                    .position(placeLL)
+                                    .title(placeName)
+                                    .snippet("地址: "+vicinity+"\n"+"評分: "+rating+"\n距離: "+Distance+"M");
+                        }else{
+                            Distance = Distance /1000;
+                            places[p]=new MarkerOptions()
+                                    .position(placeLL)
+                                    .title(placeName)
+                                    .snippet("地址: "+vicinity+"\n"+"評分: "+rating+"\n距離: "+Distance+"KM");
+                        }
+
 
                     }
 
@@ -2380,6 +2407,19 @@ public class MapsActivity extends AppCompatActivity
             fabtest.hide();
         }
 
+    }
+
+    private double DisConculate(double lat_a, double lng_a, double lat_b, double lng_b) {
+        double radLat1 = (lat_a * Math.PI / 180.0);
+        double radLat2 = (lat_b * Math.PI / 180.0);
+        double a = radLat1 - radLat2;
+        double b = (lng_a - lng_b) * Math.PI / 180.0;
+        double s = 2 * Math.asin(Math.sqrt(Math.pow(Math.sin(a / 2), 2)
+                + Math.cos(radLat1) * Math.cos(radLat2)
+                * Math.pow(Math.sin(b / 2), 2)));
+        s = s * EARTH_RADIUS;
+        s = Math.round(s * 10000) / 10000;
+        return s;
     }
 
 
