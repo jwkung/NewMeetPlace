@@ -318,7 +318,7 @@ public class MapsActivity extends AppCompatActivity
                 public void onClick(View v) {
                     if(isManager&&finalplacemkr!=null){
                         UserMkr umkr = new UserMkr(String.valueOf(finalplacemkr.getPosition().latitude),String.valueOf(finalplacemkr.getPosition().longitude)
-                                ,"Final Place",getEmail());
+                                ,finalplacemkr.getTitle()+"(Final Place)",getEmail());
                         if (Manager_umkrkey != null) {
                             mUMkrReference.child(Manager_umkrkey).setValue(umkr);
                             Toast.makeText(getApplicationContext(),"已設定最終目的地", Toast.LENGTH_SHORT).show();
@@ -1874,6 +1874,7 @@ public class MapsActivity extends AppCompatActivity
                         String tag= String.valueOf(mkr.getTag());
                         if (tag.equals(key)) {
                             mkr.setPosition(latLng);
+                            mkr.setTitle(usermkr.Title);
                         }
 
                     }
