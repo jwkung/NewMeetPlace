@@ -11,7 +11,7 @@
     android:id="@+id/container"
     android:orientation="vertical"
     android:padding="0dp"
-    android:background="@drawable/notification_template_icon_bg" >
+    android:background="@color/main_background" >
 
 </LinearLayout>
 

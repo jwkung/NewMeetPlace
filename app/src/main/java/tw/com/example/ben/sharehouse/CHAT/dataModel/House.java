@@ -20,7 +20,7 @@ public class House {
         FirebaseDatabase db = FirebaseDatabase.getInstance();
         DatabaseReference Ref= db.getReference("roomTables").push();
         this.roomTable = Ref.toString();
-        this.name="房間 長按能更改名稱";
+        this.name="房間 長按修改名稱";
         DatabaseReference Ref2= db.getReference("houses").push();
         this.url=Ref2.toString();
         DatabaseReference Ref3= db.getReference("chat").push();
@@ -34,7 +34,7 @@ public class House {
         FirebaseDatabase db = FirebaseDatabase.getInstance();
         DatabaseReference Ref= db.getReference("roomTables").push();
         this.roomTable = Ref.toString();
-        this.name="123";
+        this.name= name;
         DatabaseReference Ref2= db.getReference("houses").push();
         this.url=Ref2.toString();
     }

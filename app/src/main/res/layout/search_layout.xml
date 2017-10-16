@@ -20,8 +20,7 @@
                 android:layout_weight="1"
                 android:ems="10"
                 android:hint='請輸入"完整"信箱'
-                android:inputType="textPersonName"
-                android:text="@string/default_email" />
+                android:inputType="textPersonName" />
 
             <Button
                 android:id="@+id/button3"
@@ -37,6 +36,34 @@
     <ListView
         android:id="@+id/list"
         android:layout_width="match_parent"
-        android:layout_height="466dp" />
+        android:layout_height="335dp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="51dp"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/textView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="房間名稱："
+            android:textSize="25sp" />
+
+        <EditText
+            android:id="@+id/edt_housename"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:ems="10"
+            android:inputType="textPersonName" />
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/button5"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:onClick="searchcheck"
+        android:text="確定" />
 
 </LinearLayout>
