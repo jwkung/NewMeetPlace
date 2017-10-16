@@ -151,10 +151,9 @@ public class house_list_adapter extends BaseAdapter{
         return view;
     }
     protected void populateView(final View view, final House House) {
-
         String houseUrl = House.getUrl();
-        String name;
-        DatabaseReference Database;
+        final String name;
+        final DatabaseReference Database;
 
         Database = FirebaseDatabase.getInstance().getReferenceFromUrl(houseUrl);
 
@@ -162,11 +161,13 @@ public class house_list_adapter extends BaseAdapter{
                 new ValueEventListener() {
                     @Override
                     public void onDataChange(com.google.firebase.database.DataSnapshot dataSnapshot) {
-                        House house = dataSnapshot.getValue(House.class);
-                        TextView nameView = (TextView) view.findViewById(R.id.name);
-                        nameView.setText(house.getName().toString());
-                        TextView chat = (TextView) view.findViewById(R.id.chat);
-                        chat.setText(house.getChat());
+                        if(dataSnapshot.exists()){
+                            House house = dataSnapshot.getValue(House.class);
+                            TextView nameView = (TextView) view.findViewById(R.id.name);
+                            nameView.setText(house.getName().toString());
+                            TextView chat = (TextView) view.findViewById(R.id.chat);
+                            chat.setText(house.getChat());
+                        }
                     }
                     @Override
                     public void onCancelled(DatabaseError databaseError) {

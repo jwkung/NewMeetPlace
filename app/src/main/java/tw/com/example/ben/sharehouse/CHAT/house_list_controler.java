@@ -279,6 +279,7 @@ public class house_list_controler extends Fragment {
                 final View item = LayoutInflater.from(getActivity()).inflate(R.layout.alert_dialog_house, null);
                 final House house = new House();
                 Ref.setValue(house);
+                GV.setSearch_House_Name(Ref.toString());
 
                 final Intent search =new Intent(getActivity(), tw.com.example.ben.sharehouse.CHAT.search.class);
                 startActivity(search);

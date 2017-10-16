@@ -45,7 +45,10 @@
         </activity>
         <activity android:name=".CHAT.chat_main_layout_controler" />
         <activity android:name=".edit_house" />
-        <activity android:name=".CHAT.search" />
+        <activity android:name=".CHAT.search"
+            android:windowSoftInputMode="adjustPan">
+
+        </activity>
         <!--
              The API key for Google Maps-based APIs is defined as a string resource.
              (See the file "res/values/google_maps_api.xml").
