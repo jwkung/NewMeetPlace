@@ -4,14 +4,17 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.DataSetObserver;
+import android.graphics.Color;
 import android.location.Location;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.LayoutRes;
 import android.support.annotation.NonNull;
+import android.support.constraint.ConstraintLayout;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.NavigationView;
+import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.view.GravityCompat;
@@ -37,6 +40,12 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.akexorcist.googledirection.DirectionCallback;
+import com.akexorcist.googledirection.GoogleDirection;
+import com.akexorcist.googledirection.model.Direction;
+import com.akexorcist.googledirection.model.Info;
+import com.akexorcist.googledirection.model.Leg;
+import com.akexorcist.googledirection.util.DirectionConverter;
 import com.firebase.client.Firebase;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesNotAvailableException;
@@ -59,6 +68,8 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.Polygon;
+import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.auth.FirebaseAuth;
@@ -95,6 +106,7 @@ import tw.com.example.ben.sharehouse.R;
 import tw.com.example.ben.sharehouse.lib.TinyDB;
 import tw.com.example.ben.sharehouse.ui.IconSmallerOnTouchListener;
 
+import static android.R.attr.rating;
 import static android.os.SystemClock.sleep;
 
 public class MapsActivity extends AppCompatActivity
@@ -131,13 +143,16 @@ public class MapsActivity extends AppCompatActivity
     private DatabaseReference ManagerCameraReference;//資料庫存取路徑-聊天室管理者相機位置資料
     private DatabaseReference ManagerMarkerReference;//資料庫存取路徑-聊天室管理者同步畫面資料
     private DatabaseReference ManagerFlagReference;//資料庫存取路徑-聊天室管理者Flag
+    private DatabaseReference FinalPlaceReference;//final place
     private ChildEventListener mChildEventListener,mUMkraddChildEventListener ;//資料庫變動監聽事件(使用者位置/自訂標記)
     private ChildEventListener mNearPlaceChildEventListener;//資料庫變動監聽事件(附近地點結果資料)
+    private ChildEventListener mFinalPlaceEventListener;
     private ValueEventListener mManagerValueEventListener;//資料庫變動監聽事件(聊天室管理者資料)
     private ValueEventListener mCenterPointListener;//資料庫變動監聽事件(中心點位置資料)
     private ValueEventListener mSearchmkrListener;//資料庫變動監聽事件(搜尋標記資料)
     private ValueEventListener mFollowMarkerValueEventListener;
     private ValueEventListener mManagerFlagEventListener;
+
     public List<Marker> markersList,UmarkerList;//(使用者位置/自訂標記)List
     public List<String> chatmember;//聊天室成員List
     public List<String> placetype;//搜尋地點類型List
@@ -160,8 +175,8 @@ public class MapsActivity extends AppCompatActivity
     Toolbar toolbar;
     FirebaseUser currentUser;
     int locreqflag;//是否同步自身位置
-    private Marker[] placeMarkers;
-    private MarkerOptions[] places;
+    private Marker[] placeMarkers,naviMarkers;
+    private MarkerOptions[] places,naviplaces;
     int page;
     LatLng centerpoint;
     private Marker centermarker;
@@ -185,10 +200,14 @@ public class MapsActivity extends AppCompatActivity
     FloatingActionButton fabtest;
     private boolean managerflag;
     ChatApplication GV;  // Global Variable
-    private Marker finalplacemkr;
-    private String Manager_email,Manager_umkrkey;
+    private Marker choicefinalplacemkr,finalplacemkr;
     private final double EARTH_RADIUS = 6378137.0;  // Distance paremeter
     private double Distance; // Distance
+    private boolean isnavi,issnap;
+    private int navimarkernum;
+    private Polyline navipolyline;
+
+
 
 
     // TODO: OnCreate
@@ -237,6 +256,8 @@ public class MapsActivity extends AppCompatActivity
         issearch = false;
         searchexec =false;
         managerflag = false;
+        isnavi =false;
+        issnap =false;
         toolbartxv = (TextView) findViewById(R.id.toolbar_txv);
         bar_scrollvw=(ScrollView)findViewById(R.id.bar_scrollvw);
         //檢查使用者是否存在(有無登入)
@@ -291,6 +312,7 @@ public class MapsActivity extends AppCompatActivity
             locreqflag = 1;//同步自身位置旗標
             //附近位置儲存陣列及初始搜索半徑
             placeMarkers = new Marker[MAX_PLACES];
+            naviMarkers = new Marker[1000];
             nearradius = 250;
             //設定相關功能資料庫路徑
             NearplaceReference = MapDatabase.getReference().child(Chatroom_Key).child("Nearplace");
@@ -301,6 +323,7 @@ public class MapsActivity extends AppCompatActivity
             SearchmkrReference = MapDatabase.getReference().child(Chatroom_Key).child("SearchMarker");
             mFirebaseStorage = FirebaseStorage.getInstance();
             mChatPhotosStorageReferenece = mFirebaseStorage.getReference().child("chat_photos");
+            FinalPlaceReference= MapDatabase.getReference().child(Chatroom_Key).child("FinalPlace");
             check_manager();//檢查誰是管理員
             set_map_member_loc();//使用者位置標記監聽實作
             set_map_customize_mkr();//使用者自訂標記監聽實作
@@ -311,38 +334,27 @@ public class MapsActivity extends AppCompatActivity
             set_search_mkr();//搜尋標記監聽實作-追隨模式
             set_followmkr();//標記同步顯示-追隨模式
             set_manageflag();
+            set_finalplace();
 
             fabtest = (FloatingActionButton) findViewById( R.id.fab);
             fabtest.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    if(isManager&&finalplacemkr!=null){
-                        UserMkr umkr = new UserMkr(String.valueOf(finalplacemkr.getPosition().latitude),String.valueOf(finalplacemkr.getPosition().longitude)
-                                ,finalplacemkr.getTitle()+"(Final Place)",getEmail());
-                        if (Manager_umkrkey != null) {
-                            mUMkrReference.child(Manager_umkrkey).setValue(umkr);
-                            Toast.makeText(getApplicationContext(),"已設定最終目的地", Toast.LENGTH_SHORT).show();
-                        }
-                        else{
-                            mUMkrReference.push().setValue(umkr);
-                            Toast.makeText(getApplicationContext(),"已設定最終目的地", Toast.LENGTH_SHORT).show();
-                        }
+                    if(isManager&&choicefinalplacemkr!=null){
+                        finalplacemkr = choicefinalplacemkr;
+                        FinalPlace fp = new FinalPlace(finalplacemkr.getTitle(),String.valueOf(finalplacemkr.getPosition().latitude),
+                                String.valueOf(finalplacemkr.getPosition().longitude));
+
+                        FinalPlaceReference.child("fp").setValue(fp);
+                        Toast.makeText(getApplicationContext(),"已設定最終目的地", Toast.LENGTH_SHORT).show();
 
                     }
                     else if(!isManager){
-                        int size=UmarkerList.size();
-                        for(int m=0 ; m < size; ++m) {
-                            Marker mkr;
-                            mkr = UmarkerList.get(m);
-                            String key = (String) mkr.getTag();
-                            if(key != null && key.equals(Manager_umkrkey)){
-                                mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(
-                                        new LatLng(mkr.getPosition().latitude,
-                                                mkr.getPosition().longitude),DEFAULT_ZOOM));
-                                mkr.showInfoWindow();
-                            }
-
-                        }
+                       if(finalplacemkr!=null){
+                           mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
+                                   new LatLng(finalplacemkr.getPosition().latitude,
+                                           finalplacemkr.getPosition().longitude), DEFAULT_ZOOM));
+                       }
                     }
                 }
             });
@@ -533,7 +545,7 @@ public class MapsActivity extends AppCompatActivity
             public View getInfoWindow(Marker marker)
             {
                 View infoWindow;
-               if(marker.getTag() == "nearplace"|| marker.getTag() == "searchmarker"){
+               if(marker.getTag() == "nearplace"|| marker.getTag() == "searchmarker"||marker.getTag() == "naviplace"){
                    infoWindow = getLayoutInflater().inflate(R.layout.custom_info_contents,
                            (FrameLayout)findViewById(R.id.map), false);
                }
@@ -882,6 +894,12 @@ public class MapsActivity extends AppCompatActivity
         if(mManagerFlagEventListener !=null){
             ManagerFlagReference.removeEventListener(mManagerFlagEventListener);
         }
+        if(mFinalPlaceEventListener !=null){
+            FinalPlaceReference.removeEventListener(mFinalPlaceEventListener);
+        }
+        if(finalplacemkr !=null){
+            finalplacemkr.remove();
+        }
 
     }
 
@@ -967,7 +985,7 @@ public class MapsActivity extends AppCompatActivity
     public boolean onMarkerClick(final Marker marker) {
         //如果是聊天室管理者，傳送自己點擊的標記，讓開啟追隨模式的成員自動同步點擊該標記
         if(isManager){
-            finalplacemkr = marker;
+            choicefinalplacemkr = marker;
             if(Objects.equals(marker.getTag(), "nearplace")){
                 for (int i = 0 ; i<nearplacenum;i++) {
                     if (Objects.equals(marker.getTitle(), placeMarkers[i].getTitle())) {
@@ -1160,12 +1178,18 @@ public class MapsActivity extends AppCompatActivity
                         }
                         DL.closeDrawer(GravityCompat.START);
                         break;
+                    case R.id.navi:
+                        setnavi();
+                        DL.closeDrawer(GravityCompat.START);
+                        break;
                     case R.id.navItemAbout:
                            /* Intent intent2 = new Intent();
                             intent2.setClass(Navigation_BaseActivity.this, About.class);
                             startActivity(intent2);
                             overridePendingTransition(0, 0);
                             finish();*/
+                        break;
+                    case R.id.test:
                         break;
                     case R.id.navItemLogout:
                         new AlertDialog.Builder(MapsActivity.this)
@@ -1244,7 +1268,7 @@ public class MapsActivity extends AppCompatActivity
     //查詢附近地點URL設定
     private String getDirectionsUrl(LatLng centerpoint,String radius){
 
-        Log.i("placetype",finplacetype);
+        //Log.i("placetype",finplacetype);
         return "https://maps.googleapis.com/maps/api/place/nearbysearch/" +
                 "json?location="+centerpoint.latitude+","+centerpoint.longitude+
                 "&radius="+radius+"&sensor=true" +
@@ -1319,8 +1343,22 @@ public class MapsActivity extends AppCompatActivity
         @Override
         protected void onPostExecute(String s) {
             super.onPostExecute(s);
-            //Log.d("JSON", s);
-            if(!searchexec) {
+            Log.d("JSON", s);
+            if(isnavi){
+                parsenaviJSON(s);
+                if (naviplaces != null ) {
+                    for (int p =navimarkernum ; p < naviplaces.length+navimarkernum; p++) {
+                        //will be null if a value was missing
+                        if (naviplaces[p-navimarkernum] != null) {
+                            naviMarkers[p] = mMap.addMarker(naviplaces[p-navimarkernum]);
+                            naviMarkers[p].setTag("naviplace");
+                        }
+                    }
+                    navimarkernum += naviplaces.length;
+                }
+
+            }
+            else if(!searchexec) {
                 parseJSON(s);
                 if (nearradius >= 1000 && page == 1 && places.length < 10) {
                     nearradius += 1000;
@@ -1456,6 +1494,60 @@ public class MapsActivity extends AppCompatActivity
             }
             return null;
         }
+
+        private void parsenaviJSON(String s){
+            try {
+                //parse JSON
+                JSONObject resultObject = new JSONObject(s);
+                JSONArray placesArray = resultObject.getJSONArray("results");
+                naviplaces = new MarkerOptions[placesArray.length()];
+                if(placesArray.length() < 1 )
+                    return;
+                for (int p=0; p<placesArray.length(); p++) {
+                    //parse each place
+                    boolean missingValue;
+                    LatLng placeLL=null;
+                    String placeName="";
+                    String vicinity="";
+                    String rating="";
+                    try{
+                        //attempt to retrieve place data values
+                        missingValue=false;
+                        JSONObject placeObject = placesArray.getJSONObject(p);
+                        JSONObject loc = placeObject.getJSONObject("geometry").getJSONObject("location");
+                        placeLL = new LatLng(
+                                Double.valueOf(loc.getString("lat")),
+                                Double.valueOf(loc.getString("lng")));
+                        vicinity = placeObject.getString("vicinity");
+                        placeName = placeObject.getString("name");
+                        try{
+                            rating = placeObject.getString("rating");
+                        }
+                        catch(Exception e){
+                            rating = "";
+                        }
+
+                    }
+                    catch(JSONException jse){
+                        missingValue=true;
+                        jse.printStackTrace();
+                    }
+                    if(missingValue)
+                        naviplaces[p]=null;
+                    else{
+                        naviplaces[p]=new MarkerOptions()
+                                .position(placeLL)
+                                .title(placeName)
+                                .snippet("地址: "+vicinity+"\n"+"評分: "+rating);
+                    }
+                }
+            }
+            catch (JSONException e) {
+                e.printStackTrace();
+            }
+
+        }
+
         private void parseJSON(String s) {
             try {
                 //parse JSON
@@ -1671,6 +1763,13 @@ public class MapsActivity extends AppCompatActivity
                         );
                         searchmarker.showInfoWindow();
                     }
+                    else if(cp == 5){
+                        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
+                                new LatLng(finalplacemkr.getPosition().latitude,
+                                        finalplacemkr.getPosition().longitude),DEFAULT_ZOOM)
+                        );
+                        finalplacemkr.showInfoWindow();
+                    }
                     DL.closeDrawer(Gravity.END);
                 }
 
@@ -1729,6 +1828,13 @@ public class MapsActivity extends AppCompatActivity
                         );
                         searchmarker.showInfoWindow();
                     }
+                    else if(cp == 5){
+                        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
+                                new LatLng(finalplacemkr.getPosition().latitude,
+                                        finalplacemkr.getPosition().longitude),DEFAULT_ZOOM)
+                        );
+                        finalplacemkr.showInfoWindow();
+                    }
                     DL.closeDrawer(Gravity.END);
                 }
                 return false;
@@ -1754,6 +1860,9 @@ public class MapsActivity extends AppCompatActivity
         }
         if(searchmarker != null){
             menu.add(4,0,Menu.NONE,searchmarker.getTitle());
+        }
+        if(finalplacemkr != null){
+            menu.add(5,0,Menu.NONE,finalplacemkr.getTitle()+"(fin)");
         }
     }
 
@@ -1846,9 +1955,6 @@ public class MapsActivity extends AppCompatActivity
                     UmarkerList.add(marker);
                     if(email.equals(usermkr.Email)){
                         UMkrNumLimit--;
-                    }
-                    if(Manager_email!=null&&Manager_email.equals(usermkr.Email)){
-                        Manager_umkrkey = key;
                     }
                 }
 
@@ -1966,6 +2072,7 @@ public class MapsActivity extends AppCompatActivity
                         page = 1;//reset result page
                         nearradius = 250 ; //default search radius
                         String url = getDirectionsUrl(centerpoint,"250");//get search url
+                        isnavi = false ;
                         new TransTask().execute(url);//search nearplace
                     }
 
@@ -2038,6 +2145,17 @@ public class MapsActivity extends AppCompatActivity
         placeMarkers = new Marker[MAX_PLACES];
     }
 
+    private void del_navimkr(){
+        if (naviMarkers != null) {
+            for (Marker naviMarker : naviMarkers) {
+                if (naviMarker != null)
+                    naviMarker.remove();
+            }
+        }
+        naviMarkers = new Marker[1000];
+
+    }
+
     private void set_manager(){
 
         ValueEventListener ManagerEventListener = new ValueEventListener() {
@@ -2072,13 +2190,11 @@ public class MapsActivity extends AppCompatActivity
                     m = new Manager(getEmail(),"0.0","0.0","15");
                     ManagerCameraReference.setValue(m);
                     isManager = true;
-                    Manager_email=getEmail();
                     Menu menu = NV.getMenu();
                     MenuItem item = menu.findItem(R.id.followmode);
                     item.setVisible(false);
                 }
                 else {
-                    Manager_email = m.manager_email;
                     if( getEmail().equals(m.manager_email)) {
                         setfabvisible(true);
                         isManager = true;
@@ -2243,6 +2359,7 @@ public class MapsActivity extends AppCompatActivity
                 Place place = PlaceAutocomplete.getPlace(this, data);
                 String searchplaceuri =set_search_place_url(place.getId());
                 searchexec = true;
+                isnavi = false ;
                 new TransTask().execute(searchplaceuri);
                 //toolbartxv.setText(place.getName());
             } else if (resultCode == PlaceAutocomplete.RESULT_ERROR) {
@@ -2422,6 +2539,148 @@ public class MapsActivity extends AppCompatActivity
         s = Math.round(s * 10000) / 10000;
         return s;
     }
+
+    //導航實作
+    private void setnavi(){
+        if(finalplacemkr == null){
+           return;
+        }
+        del_navimkr();
+        int size = markersList.size();
+        LatLng origin = null;
+        for(int n = 0;n<size;++n){
+            Marker mkr;
+            mkr = markersList.get(n);
+            if(Objects.equals(mkr.getTitle(), getEmail())){
+                origin = mkr.getPosition();
+            }
+        }
+        if (origin == null){
+            Log.i("err","origin == null");
+            return;
+        }
+        navilib(origin,finalplacemkr.getPosition());
+    }
+
+    private void set_navi_url(String lat,String lon){
+        String url = "https://maps.googleapis.com/maps/api/place/nearbysearch/" +
+                "json?location="+lat+","+lon+
+                "&radius=30&sensor=true" +
+                "&types=restaurant&language=zh-TW"+
+                "&key=AIzaSyDa5rahbohkWotgck3IDv6votMlBeMWzS8";
+        isnavi = true ;
+        new TransTask().execute(url);
+    }
+    private void set_finalplace(){
+
+        ChildEventListener FinalPlaceChildListener = new ChildEventListener() {
+
+            @Override
+            public void onChildAdded(DataSnapshot dataSnapshot, String s) {
+                FinalPlace fp = dataSnapshot.getValue(FinalPlace.class);
+                if(fp!=null){
+                    LatLng l = new LatLng(Double.parseDouble(fp.lat),Double.parseDouble(fp.lon));
+                    finalplacemkr = mMap.addMarker(new MarkerOptions().position(l)
+                            .title(fp.title)
+                            .icon(BitmapDescriptorFactory.defaultMarker(150)));
+                    finalplacemkr.setTag("FinalPlace");
+
+                }
+
+            }
+
+            @Override
+            public void onChildChanged(DataSnapshot dataSnapshot, String previousChildName) {
+                FinalPlace fp = dataSnapshot.getValue(FinalPlace.class);
+                if(fp!=null){
+                    LatLng l = new LatLng(Double.parseDouble(fp.lat),Double.parseDouble(fp.lon));
+                    finalplacemkr.setPosition(l);
+                    Log.i("change","");
+                }
+
+            }
+
+            @Override
+            public void onChildRemoved(DataSnapshot dataSnapshot) {
+            }
+
+            @Override
+            public void onChildMoved(DataSnapshot dataSnapshot, String s) {
+
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+
+            }
+        };
+        FinalPlaceReference.addChildEventListener(FinalPlaceChildListener);
+        mFinalPlaceEventListener= FinalPlaceChildListener;
+
+
+    }
+
+    private void navilib(LatLng ori,LatLng dest){
+        String key = "AIzaSyDa5rahbohkWotgck3IDv6votMlBeMWzS8";
+        GoogleDirection.withServerKey(key)
+                .from(ori)
+                .to(dest)
+                .execute(new DirectionCallback(){
+            @Override
+            public void onDirectionSuccess(Direction direction, String rawBody) {
+                // Do something here
+                if (direction.isOK()) {
+                    //mMap.addMarker(new MarkerOptions().position(ori));
+                    //mMap.addMarker(new MarkerOptions().position(dest));
+                    ArrayList<LatLng> directionPositionList = direction.getRouteList().get(0).getLegList().get(0).getDirectionPoint();
+                    Leg leg = direction.getRouteList().get(0).getLegList().get(0);
+                    Info distanceInfo = leg.getDistance();
+                    String route_dis = distanceInfo.getText();
+                    String[] AfterSplit = route_dis.split(" ");
+                    Double routedis =Double.parseDouble(AfterSplit[0]);
+                    if(navipolyline!=null)
+                        navipolyline.remove();
+                    navipolyline = mMap.addPolyline(DirectionConverter.createPolyline(MapsActivity.this, directionPositionList, 5, Color.RED));
+                    if(routedis <= 5.0) {
+                        navimarkernum = 0;
+                        LatLng lastpoint = directionPositionList.get(0);
+                        //mMap.addMarker(new MarkerOptions().position(directionPositionList.get(0)));
+                        for (int i = 1; i < directionPositionList.size(); i++) {
+                            Double dis = DisConculate(lastpoint.latitude, lastpoint.longitude, directionPositionList.get(i).latitude, directionPositionList.get(i).longitude);
+                            if (dis >= 60 && dis <= 120) {
+                                //mMap.addMarker(new MarkerOptions().position(directionPositionList.get(i)).icon(BitmapDescriptorFactory.defaultMarker(200)));
+                                set_navi_url(String.valueOf(directionPositionList.get(i).latitude),String.valueOf(directionPositionList.get(i).longitude));
+                                lastpoint = directionPositionList.get(i);
+                            } else if (dis > 120) {
+                                int weight = (int) (dis / 60);
+                                LatLng ll;
+                                for (int j = 1; j < weight; j++) {
+                                    ll = new LatLng(lastpoint.latitude + (directionPositionList.get(i).latitude - lastpoint.latitude) * j / weight,
+                                            lastpoint.longitude + (directionPositionList.get(i).longitude - lastpoint.longitude) * j / weight);
+                                    //mMap.addMarker(new MarkerOptions().position(ll).icon(BitmapDescriptorFactory.defaultMarker(200)));
+                                    set_navi_url(String.valueOf(ll.latitude),String.valueOf(ll.longitude));
+                                }
+                                //mMap.addMarker(new MarkerOptions().position(directionPositionList.get(i)).icon(BitmapDescriptorFactory.defaultMarker(200)));
+                                set_navi_url(String.valueOf(directionPositionList.get(i).latitude),String.valueOf(directionPositionList.get(i).longitude));
+                                lastpoint = directionPositionList.get(i);
+
+                            }
+                        }
+                    }
+                    /*naviMarkers[p] = mMap.addMarker(naviplaces[p]);
+                        naviMarkers[p].setIcon(BitmapDescriptorFactory.defaultMarker(50));
+                        naviMarkers[p].setTag("naviplace");*/
+
+                }
+            }
+
+            @Override
+            public void onDirectionFailure(Throwable t) {
+                // Do something here
+            }
+        });
+    }
+
 
 
 

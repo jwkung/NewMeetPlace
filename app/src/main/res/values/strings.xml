@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Chat</string>
+    <string name="app_name">MeetPlace</string>
 
     <!-- Strings related to login -->
     <string name="search_commit">確定</string>
@@ -76,6 +76,8 @@
     <string name="shopping_mall">百貨公司</string>
     <string name="followmode">開啟追隨模式</string>
     <string name="closefollowmode">關閉追隨模式</string>
+    <string name="navi">導航至目的地</string>
+    <string name="test">測試</string>
 
 
 

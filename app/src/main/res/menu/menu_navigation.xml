@@ -17,6 +17,12 @@
             android:id="@+id/navItemAbout"
             android:title="@string/about" />
         <item
+            android:id="@+id/navi"
+            android:title="@string/navi" />
+        <item
+            android:id="@+id/test"
+            android:title="@string/test" />
+        <item
             android:id="@+id/navItemLogout"
             android:title="@string/Logout" />
     </group>

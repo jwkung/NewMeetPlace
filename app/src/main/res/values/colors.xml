@@ -147,4 +147,5 @@
     <color name="primary_text_material_light">#867f4f24</color>
     <color name="primary_text_default_material_light">#867f4f24</color>
     <color name="toolbar_editext">#bdb5af</color>
+    <color name="transparent">#5bf3ede3</color>
 </resources>
