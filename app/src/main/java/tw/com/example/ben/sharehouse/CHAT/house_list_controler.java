@@ -25,6 +25,8 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.Query;
 
+import java.util.Objects;
+
 import tw.com.example.ben.sharehouse.CHAT.dataModel.House;
 import tw.com.example.ben.sharehouse.CHAT.dataModel.MyUser;
 import tw.com.example.ben.sharehouse.Map.MapsActivity;
@@ -171,14 +173,72 @@ public class house_list_controler extends Fragment {
                                @Override
                                public void onChildAdded(DataSnapshot dataSnapshot, String s) {
                                    if (dataSnapshot.exists()){
-                                       String Key2 = dataSnapshot.getRef().getKey().toString();
+                                       String Key2 = dataSnapshot.getRef().getKey();
                                        Key2 = "https://sharehousetest.firebaseio.com/houses/"+Key2;
                                        GV.setKEY_TWO(Key2);
                                        MyUser myUser= (MyUser) tinydb.getObject("MyUser", MyUser.class);
                                        String UserKey = myUser.getNickname();
+                                       final Query test = Ref.child("userHouseTables");
+                                       final String finalKey = Key2;
+                                       test.addChildEventListener(new ChildEventListener() {
+                                           @Override
+                                           public void onChildAdded(DataSnapshot dataSnapshot, String s) {
+                                              String key = dataSnapshot.getKey();
+                                               final Query test2 = Ref.child("userHouseTables").child(key).orderByChild("url").equalTo(finalKey);
+                                               test2.addChildEventListener(new ChildEventListener() {
+                                                   @Override
+                                                   public void onChildAdded(DataSnapshot dataSnapshot, String s) {
+                                                       if (dataSnapshot.exists()){
+                                                           dataSnapshot.getRef().setValue(null);
+                                                           new Firebase(GV.getKEY_TWO()).removeValue();
+                                                       }
+                                                   }
+
+                                                   @Override
+                                                   public void onChildChanged(DataSnapshot dataSnapshot, String s) {
+
+                                                   }
+
+                                                   @Override
+                                                   public void onChildRemoved(DataSnapshot dataSnapshot) {
+
+                                                   }
+
+                                                   @Override
+                                                   public void onChildMoved(DataSnapshot dataSnapshot, String s) {
+
+                                                   }
+
+                                                   @Override
+                                                   public void onCancelled(DatabaseError databaseError) {
+
+                                                   }
+                                               });
+                                           }
+
+                                           @Override
+                                           public void onChildChanged(DataSnapshot dataSnapshot, String s) {
+
+                                           }
+
+                                           @Override
+                                           public void onChildRemoved(DataSnapshot dataSnapshot) {
+
+                                           }
+
+                                           @Override
+                                           public void onChildMoved(DataSnapshot dataSnapshot, String s) {
+
+                                           }
+
+                                           @Override
+                                           public void onCancelled(DatabaseError databaseError) {
+
+                                           }
+                                       });
 
 
-                                       final Query delete2Query = Ref.child("userHouseTables").child(UserKey).orderByChild("url").equalTo(Key2);
+                                       /*final Query delete2Query = Ref.child("userHouseTables").child(UserKey).orderByChild("url").equalTo(Key2);
                                        Log.e("ChatDelete2", "ChatDelete2"+Key2);
                                        delete2Query.addChildEventListener(new ChildEventListener() {
                                            @Override
@@ -196,7 +256,7 @@ public class house_list_controler extends Fragment {
                                            public void onChildMoved(DataSnapshot dataSnapshot2, String s2) {}
                                            @Override
                                            public void onCancelled(DatabaseError databaseError2) {}
-                                       });
+                                       });*/
 
                                        /*final Query deleteOtherUserQuery = Ref.child("userHouseTables").orderByChild("url").equalTo(Key2);
                                        deleteOtherUserQuery.addChildEventListener(new ChildEventListener() {
