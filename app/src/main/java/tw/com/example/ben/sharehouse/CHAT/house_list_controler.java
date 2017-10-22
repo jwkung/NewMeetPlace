@@ -62,6 +62,8 @@ public class house_list_controler extends Fragment {
             public void onItemClick(AdapterView<?> parent, final View view, int position, long id) {
                 TextView chat = (TextView) view.findViewById(R.id.chat);
                 String Key = chat.getText().toString();
+
+
                 FirebaseDatabase db = FirebaseDatabase.getInstance();
                 final DatabaseReference Ref= db.getReference();
                 Query deleteQuery = Ref.child("houses").orderByChild("chat").equalTo(Key);
@@ -148,11 +150,23 @@ public class house_list_controler extends Fragment {
                            //刪除聊天記錄
                            TextView chat = (TextView) view.findViewById(R.id.chat);
                            String Key = chat.getText().toString();
+                           //刪除Map
+                           String MapKey =  new Firebase(Key).getKey();
+                           String MapUrl = "https://meetplacemap.firebaseio.com/"+MapKey;
+                           Log.v("MapKey",MapKey);
+
+                           try{
+                               new Firebase(MapUrl).removeValue();
+                           }
+                           catch (Exception e){
+
+                           }
                            new Firebase(Key).removeValue();
+
                            Log.e("ChatDelete", "ChatDelete"+Key);
                            FirebaseDatabase db = FirebaseDatabase.getInstance();
                            final DatabaseReference Ref= db.getReference();
-                           Query deleteQuery = Ref.child("houses").orderByChild("chat").equalTo(Key);
+                           final Query deleteQuery = Ref.child("houses").orderByChild("chat").equalTo(Key);
                            deleteQuery.addChildEventListener(new ChildEventListener() {
                                @Override
                                public void onChildAdded(DataSnapshot dataSnapshot, String s) {
@@ -164,38 +178,14 @@ public class house_list_controler extends Fragment {
                                        String UserKey = myUser.getNickname();
 
 
-                                       Query delete2Query = Ref.child("userHouseTables").child(UserKey).orderByChild("url").equalTo(Key2);
+                                       final Query delete2Query = Ref.child("userHouseTables").child(UserKey).orderByChild("url").equalTo(Key2);
                                        Log.e("ChatDelete2", "ChatDelete2"+Key2);
                                        delete2Query.addChildEventListener(new ChildEventListener() {
                                            @Override
                                            public void onChildAdded(DataSnapshot dataSnapshot2, String s2) {
                                                if (dataSnapshot2.exists()){
-                                                   String Key3 = dataSnapshot2.getRef().getKey().toString();
-                                                   Log.e("ChatDelete3", "ChatDelete3"+Key3);
-                                                   Query delete3Query = Ref.child("userHouseTables").orderByChild("url").limitToLast(1).equalTo(GV.getKEY_TWO());
-                                                   delete3Query.addChildEventListener(new ChildEventListener() {
-                                                       @Override
-                                                       public void onChildAdded(DataSnapshot dataSnapshot3, String s) {
-                                                           if ( dataSnapshot3.exists() ){
-                                                               //dataSnapshot3.getRef().setValue(null);
-                                                           }
-                                                       }
-
-                                                       @Override
-                                                       public void onChildChanged(DataSnapshot dataSnapshot, String s) {                     }
-
-                                                       @Override
-                                                       public void onChildRemoved(DataSnapshot dataSnapshot) {       }
-
-                                                       @Override
-                                                       public void onChildMoved(DataSnapshot dataSnapshot, String s) {       }
-
-                                                       @Override
-                                                       public void onCancelled(DatabaseError databaseError) {   }
-                                                   });
-
                                                    dataSnapshot2.getRef().setValue(null);
-                                                   //new Firebase(GV.getKEY_TWO()).removeValue();
+                                                   new Firebase(GV.getKEY_TWO()).removeValue();
                                                }
                                            }
                                            @Override
@@ -207,6 +197,24 @@ public class house_list_controler extends Fragment {
                                            @Override
                                            public void onCancelled(DatabaseError databaseError2) {}
                                        });
+
+                                       /*final Query deleteOtherUserQuery = Ref.child("userHouseTables").orderByChild("url").equalTo(Key2);
+                                       deleteOtherUserQuery.addChildEventListener(new ChildEventListener() {
+                                           @Override
+                                           public void onChildAdded(DataSnapshot dataSnapshot, String s) {
+                                               if(dataSnapshot.exists()){
+                                                   dataSnapshot.getRef().setValue(null);
+                                               }
+                                           }
+                                           @Override
+                                           public void onChildChanged(DataSnapshot dataSnapshot, String s) {   }
+                                           @Override
+                                           public void onChildRemoved(DataSnapshot dataSnapshot) {  }
+                                           @Override
+                                           public void onChildMoved(DataSnapshot dataSnapshot, String s){}
+                                           @Override
+                                           public void onCancelled(DatabaseError databaseError) {}
+                                       });*/
                                    }
                                }
                                @Override
