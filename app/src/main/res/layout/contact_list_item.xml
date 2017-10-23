@@ -42,7 +42,7 @@
             android:layout_marginStart="10dp"
             android:layout_marginTop="8dp"
             android:layout_weight="0.64"
-            app:srcCompat="@drawable/home_icon2" />
+            app:srcCompat="@drawable/home4" />
 
         <LinearLayout
             android:orientation="vertical"
