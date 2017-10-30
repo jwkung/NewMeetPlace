@@ -10,14 +10,24 @@ import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.ArrayAdapter;
+import android.widget.ListView;
 import android.widget.TextView;
 
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.ChildEventListener;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
 
 import tw.com.example.ben.sharehouse.CHAT.chat_main_layout_controler;
+import tw.com.example.ben.sharehouse.CHAT.dataModel.Friend;
 import tw.com.example.ben.sharehouse.CHAT.dataModel.MyUser;
 import tw.com.example.ben.sharehouse.CHAT.house_list_controler;
 import tw.com.example.ben.sharehouse.lib.TinyDB;
@@ -27,7 +37,7 @@ public class MainActivity extends AppCompatActivity
     TextView accountView;
     //fragment 變數宣告
 
-
+    public ArrayAdapter mAdapter;
     private house_list_controler fragment03;
     private chat_main_layout_controler chat;
     private chat_main_layout_controler chat_fragment;
@@ -79,6 +89,7 @@ public class MainActivity extends AppCompatActivity
         accountView = (TextView) header.findViewById(R.id.accountView);
         accountView.setText(myUser.getAccount().toString());
         mFragmentMgr.beginTransaction().replace(R.id.container, fragment03, "fragment01").commit();
+        mAdapter = new ArrayAdapter<String>(this,R.layout.friend_check_item,R.id.textfriend);
     }
 
     //複寫返回鍵觸發事件  當左邊功能選項打開時 返回建
@@ -107,7 +118,42 @@ public class MainActivity extends AppCompatActivity
         int id = item.getItemId();
         final Intent login = new Intent(this,LoginActivity.class);
         //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {      //設定
+        if (id == R.id.action_settings) {      //我的好友
+            mAdapter.clear();
+            MyUser myUser= (MyUser) tinydb.getObject("MyUser", MyUser.class);
+            String UserKey = myUser.getNickname();
+
+            FirebaseDatabase db = FirebaseDatabase.getInstance();
+            DatabaseReference Ref = db.getReference("friends").child(UserKey);
+
+            Ref.addChildEventListener(new ChildEventListener() {
+                @Override
+                public void onChildAdded(DataSnapshot dataSnapshot, String s) {
+                    Log.v("friendPick",dataSnapshot.getValue(Friend.class).getName());
+                    mAdapter.add(dataSnapshot.getValue(Friend.class).getName());
+                }
+                @Override
+                public void onChildChanged(DataSnapshot dataSnapshot, String s) {}
+
+                @Override
+                public void onChildRemoved(DataSnapshot dataSnapshot) {}
+
+                @Override
+                public void onChildMoved(DataSnapshot dataSnapshot, String s) {}
+
+                @Override
+                public void onCancelled(DatabaseError databaseError) {}
+            });
+            final AlertDialog.Builder friendAlert = new AlertDialog.Builder(this);
+            LayoutInflater inflater = getLayoutInflater();
+            final View convertView = (View) inflater.inflate(R.layout.friend_check,null);
+            ListView lv = (ListView) convertView.findViewById(R.id.friendlist);
+            lv.setAdapter(mAdapter);
+            lv.setItemsCanFocus(true);
+            lv.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE);
+            friendAlert.setTitle("好友列表");
+            friendAlert.setView(convertView);
+            friendAlert.show();
             return true;
         }
         else if (id == R.id.action_logOut) {    //登出
@@ -147,6 +193,44 @@ public class MainActivity extends AppCompatActivity
         if (id == R.id.chat) {
             //把 container layout 換成 fragment.class(使replace的方式) 最後要commit
             mFragmentMgr.beginTransaction().replace(R.id.container, fragment03, "fragment01").commit();
+        }
+        if (id == R.id.nav_share){
+            mAdapter.clear();
+            MyUser myUser= (MyUser) tinydb.getObject("MyUser", MyUser.class);
+            String UserKey = myUser.getNickname();
+
+            FirebaseDatabase db = FirebaseDatabase.getInstance();
+            DatabaseReference Ref = db.getReference("friends").child(UserKey);
+
+            Ref.addChildEventListener(new ChildEventListener() {
+                @Override
+                public void onChildAdded(DataSnapshot dataSnapshot, String s) {
+                    Log.v("friendPick",dataSnapshot.getValue(Friend.class).getName());
+                    mAdapter.add(dataSnapshot.getValue(Friend.class).getName());
+                }
+                @Override
+                public void onChildChanged(DataSnapshot dataSnapshot, String s) {}
+
+                @Override
+                public void onChildRemoved(DataSnapshot dataSnapshot) {}
+
+                @Override
+                public void onChildMoved(DataSnapshot dataSnapshot, String s) {}
+
+                @Override
+                public void onCancelled(DatabaseError databaseError) {}
+            });
+            final AlertDialog.Builder friendAlert = new AlertDialog.Builder(this);
+            LayoutInflater inflater = getLayoutInflater();
+            final View convertView = (View) inflater.inflate(R.layout.friend_check,null);
+            ListView lv = (ListView) convertView.findViewById(R.id.friendlist);
+            lv.setAdapter(mAdapter);
+            lv.setItemsCanFocus(true);
+            lv.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE);
+            friendAlert.setTitle("好友列表");
+            friendAlert.setView(convertView);
+            friendAlert.show();
+            return true;
         }
         // 按了自動關閉 並回傳true
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);

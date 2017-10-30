@@ -97,6 +97,7 @@ public class search extends AppCompatActivity implements AdapterView.OnItemClick
 
      public void friend_pick(View v)
      {
+         mAdapter.clear();
          MyUser myUser= (MyUser) tinyDB.getObject("MyUser", MyUser.class);
          String UserKey = myUser.getNickname();
 
@@ -128,27 +129,50 @@ public class search extends AppCompatActivity implements AdapterView.OnItemClick
 
     private void showfriends()
     {
+        final AlertDialog.Builder friendAlert = new AlertDialog.Builder(this);
         LayoutInflater inflater = getLayoutInflater();
         final View convertView = (View) inflater.inflate(R.layout.friend_check,null);
         ListView lv = (ListView) convertView.findViewById(R.id.friendlist);
         lv.setAdapter(mAdapter);
         lv.setItemsCanFocus(true);
         lv.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE);
-        lv.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                Toast.makeText( getApplicationContext() ,"2i3j", Toast.LENGTH_SHORT).show();
-            }
-        });
-
-        AlertDialog.Builder friendAlert = new AlertDialog.Builder(this);
         friendAlert.setTitle("好友列表");
         friendAlert.setView(convertView);
         friendAlert.show();
+        lv.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                Toast.makeText( getApplicationContext() ,"朋友"+mAdapter.getItem(position)+"已加入聊天室", Toast.LENGTH_SHORT).show();
+                FirebaseDatabase db = FirebaseDatabase.getInstance();
+                final DatabaseReference Ref= db.getReference();
+                final Query AddQuery = Ref.child("users").orderByChild("account").equalTo(mAdapter.getItem(position).toString());
+                AddQuery.addChildEventListener(new ChildEventListener() {
+                    @Override
+                    public void onChildAdded(DataSnapshot dataSnapshot, String s) {
+                        if(dataSnapshot.exists()){
+                            MyUser user = dataSnapshot.getValue(MyUser.class);
+                            String housekey = user.getHouseTable();
+                            House house= (House) tinyDB.getObject("newchatroom",House.class);
+                            new Firebase(housekey).push().setValue(house);
+                        }else{
+                            AddQuery.removeEventListener(this);
+                        }
+                    }
 
+                    @Override
+                    public void onChildChanged(DataSnapshot dataSnapshot, String s) {  }
 
+                    @Override
+                    public void onChildRemoved(DataSnapshot dataSnapshot) {}
 
+                    @Override
+                    public void onChildMoved(DataSnapshot dataSnapshot, String s) {}
 
+                    @Override
+                    public void onCancelled(DatabaseError databaseError) { }
+                });
+            }
+        });
     }
 
     public void friend_add(View v)
