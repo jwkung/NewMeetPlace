@@ -154,42 +154,14 @@ public class search extends AppCompatActivity implements AdapterView.OnItemClick
                             final String housekey = user.getHouseTable();
                             final House house= (House) tinyDB.getObject("newchatroom",House.class);
                             final String name = user.getNickname();
-                            final Query friendcheckQuery = Ref.child("userHouseTables").child(name);
+                            final Query friendcheckQuery = Ref.child("userHouseTables").child(name).orderByChild("url").equalTo(housekey);
                             friendcheckQuery.addListenerForSingleValueEvent(new ValueEventListener() {
                                 @Override
                                 public void onDataChange(DataSnapshot dataSnapshot) {
-                                    if( dataSnapshot.exists() ){
-                                        final Query fQuery = Ref.child("userHouseTables").child(name);
-                                        fQuery.addChildEventListener(new ChildEventListener() {
-                                            @Override
-                                            public void onChildAdded(DataSnapshot dataSnapshot, String s) {
-                                                String key = dataSnapshot.getKey();
-                                                GV.setFriendcount(0);
-                                                final Query f2Query = Ref.child("userHouseTables").child(name).child(key).orderByChild("url").equalTo(housekey);
-                                                f2Query.addListenerForSingleValueEvent(new ValueEventListener() {
-                                                    @Override
-                                                    public void onDataChange(DataSnapshot dataSnapshot) {
-                                                        if(dataSnapshot.exists()){
-                                                        }else{
-                                                        }
-                                                    }
-                                                    @Override
-                                                    public void onCancelled(DatabaseError databaseError) {
-
-                                                    }
-                                                });
-                                            }
-                                            @Override
-                                            public void onChildChanged(DataSnapshot dataSnapshot, String s) {}
-                                            @Override
-                                            public void onChildRemoved(DataSnapshot dataSnapshot) {}
-                                            @Override
-                                            public void onChildMoved(DataSnapshot dataSnapshot, String s) {}
-                                            @Override
-                                            public void onCancelled(DatabaseError databaseError) {}
-                                        });
+                                    if(dataSnapshot.exists()){
+                                        friendcheckQuery.removeEventListener(this);
                                     }else{
-                                        new Firebase(housekey).push().setValue(house);
+                                        dataSnapshot.getRef().push().setValue(house);
                                     }
                                 }
                                 @Override
