@@ -14,7 +14,7 @@ public class ChatApplication extends android.app.Application {
     private String ChatName;
     private String Change_House_Name;
     private String Search_House_Name;
-    private int Flag_D;
+    private int friendcount;
 
     @Override
     public void onCreate() {
@@ -23,10 +23,11 @@ public class ChatApplication extends android.app.Application {
     }
 
 
-    public void setFlag_D(int flag){
-        this.Flag_D=flag;
+    public void setFriendcount(int friendcount){
+        this.friendcount=friendcount;
     }
-    public int getFlag_D(){ return this.Flag_D; }
+    public int getFriendcount(){ return this.friendcount; }
+    public void addFriendcount(){ this.friendcount++;}
 
     public void setKEY_TWO(String KEY) { this.KEY_TWO = KEY; }
     public String getKEY_TWO(){ return this.KEY_TWO; }

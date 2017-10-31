@@ -141,8 +141,8 @@ public class search extends AppCompatActivity implements AdapterView.OnItemClick
         friendAlert.show();
         lv.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                Toast.makeText( getApplicationContext() ,"朋友"+mAdapter.getItem(position)+"已加入聊天室", Toast.LENGTH_SHORT).show();
+            public void onItemClick(AdapterView<?> parent, View view, final int position, long id) {
+                Toast.makeText( getApplicationContext() ,"朋友"+mAdapter.getItem(position)+"加入聊天室", Toast.LENGTH_SHORT).show();
                 FirebaseDatabase db = FirebaseDatabase.getInstance();
                 final DatabaseReference Ref= db.getReference();
                 final Query AddQuery = Ref.child("users").orderByChild("account").equalTo(mAdapter.getItem(position).toString());
@@ -150,27 +150,37 @@ public class search extends AppCompatActivity implements AdapterView.OnItemClick
                     @Override
                     public void onChildAdded(DataSnapshot dataSnapshot, String s) {
                         if(dataSnapshot.exists()){
-                            MyUser user = dataSnapshot.getValue(MyUser.class);
-                            String housekey = user.getHouseTable();
-                            House house= (House) tinyDB.getObject("newchatroom",House.class);
-                            new Firebase(housekey).push().setValue(house);
+                            final MyUser user = dataSnapshot.getValue(MyUser.class);
+                            final String housekey = user.getHouseTable();
+                            final House house= (House) tinyDB.getObject("newchatroom",House.class);
+                            final String name = user.getNickname();
+                            final Query friendcheckQuery = Ref.child("userHouseTables").child(name).orderByChild("url").equalTo(housekey);
+                            friendcheckQuery.addListenerForSingleValueEvent(new ValueEventListener() {
+                                @Override
+                                public void onDataChange(DataSnapshot dataSnapshot) {
+                                    if(dataSnapshot.exists()){
+                                        friendcheckQuery.removeEventListener(this);
+                                    }else{
+                                        dataSnapshot.getRef().push().setValue(house);
+                                    }
+                                }
+                                @Override
+                                public void onCancelled(DatabaseError databaseError) {}
+                            });
                         }else{
                             AddQuery.removeEventListener(this);
                         }
                     }
-
                     @Override
                     public void onChildChanged(DataSnapshot dataSnapshot, String s) {  }
-
                     @Override
                     public void onChildRemoved(DataSnapshot dataSnapshot) {}
-
                     @Override
                     public void onChildMoved(DataSnapshot dataSnapshot, String s) {}
-
                     @Override
                     public void onCancelled(DatabaseError databaseError) { }
                 });
+
             }
         });
     }
