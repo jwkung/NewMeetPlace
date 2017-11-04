@@ -69,7 +69,7 @@
     <string name="open_realtime_access">開啟位置同步</string>
     <string name="user_name"> %1$s </string>
     <string name="getcenterpoint">取得中心點及附近點</string>
-    <string name="hide_nearplacemarker">隱藏所有附近點</string>
+    <string name="hide_nearplacemarker">清除所有附近點</string>
     <string name="chat_member_list">聊天室成員清單</string>
     <string name="nearplacestore">附近商家清單</string>
     <string name="restaurant">餐廳</string>
@@ -77,8 +77,13 @@
     <string name="shopping_mall">百貨公司</string>
     <string name="followmode">開啟追隨模式</string>
     <string name="closefollowmode">關閉追隨模式</string>
-    <string name="navi">導航至目的地</string>
+    <string name="navi">路徑規劃</string>
     <string name="test">測試</string>
+    <string name="navi_ori">目前位置到目的地</string>
+    <string name="navi_all">所有人位置目的地</string>
+    <string name="navi_customize">自訂......</string>
+    <string name="clean_naviroute">清除路線</string>
+    <string name="clean_navinearstore">清除沿途商家</string>
 
 
 

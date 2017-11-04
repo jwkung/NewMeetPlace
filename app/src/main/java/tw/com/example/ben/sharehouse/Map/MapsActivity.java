@@ -1,5 +1,6 @@
 package tw.com.example.ben.sharehouse.Map;
 
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -11,10 +12,8 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.LayoutRes;
 import android.support.annotation.NonNull;
-import android.support.constraint.ConstraintLayout;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.NavigationView;
-import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.view.GravityCompat;
@@ -30,6 +29,8 @@ import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.EditText;
@@ -37,6 +38,7 @@ import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.ScrollView;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -68,7 +70,6 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
-import com.google.android.gms.maps.model.Polygon;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.FirebaseApp;
@@ -106,7 +107,6 @@ import tw.com.example.ben.sharehouse.R;
 import tw.com.example.ben.sharehouse.lib.TinyDB;
 import tw.com.example.ben.sharehouse.ui.IconSmallerOnTouchListener;
 
-import static android.R.attr.rating;
 import static android.os.SystemClock.sleep;
 
 public class MapsActivity extends AppCompatActivity
@@ -205,7 +205,12 @@ public class MapsActivity extends AppCompatActivity
     private double Distance; // Distance
     private boolean isnavi,issnap;
     private int navimarkernum;
-    private Polyline navipolyline;
+    private Polyline[] navipolyline;
+    private String[] polylinecolor={"#afff0000","#afff8000","#afffc800","#af80ff00","#af00ff00","#af00ff80","#af00ffff","#af0080ff","#af0000ff","#af8000ff","#afff00ff"};
+    private boolean isnavi_srchshop;
+    private List<String> start_type_list,start_place_list,end_type_list,end_place_list;
+    private Spinner start_type_spin,start_place_spin,end_type_spin,end_place_spin;
+
 
 
 
@@ -312,6 +317,7 @@ public class MapsActivity extends AppCompatActivity
             locreqflag = 1;//同步自身位置旗標
             //附近位置儲存陣列及初始搜索半徑
             placeMarkers = new Marker[MAX_PLACES];
+            navipolyline = new Polyline[100];
             naviMarkers = new Marker[1000];
             nearradius = 250;
             //設定相關功能資料庫路徑
@@ -341,9 +347,9 @@ public class MapsActivity extends AppCompatActivity
                 @Override
                 public void onClick(View v) {
                     if(isManager&&choicefinalplacemkr!=null){
-                        finalplacemkr = choicefinalplacemkr;
-                        FinalPlace fp = new FinalPlace(finalplacemkr.getTitle(),String.valueOf(finalplacemkr.getPosition().latitude),
-                                String.valueOf(finalplacemkr.getPosition().longitude));
+                        //finalplacemkr = choicefinalplacemkr;
+                        FinalPlace fp = new FinalPlace(choicefinalplacemkr.getTitle(),String.valueOf(choicefinalplacemkr.getPosition().latitude),
+                                String.valueOf(choicefinalplacemkr.getPosition().longitude));
 
                         FinalPlaceReference.child("fp").setValue(fp);
                         Toast.makeText(getApplicationContext(),"已設定最終目的地", Toast.LENGTH_SHORT).show();
@@ -599,7 +605,7 @@ public class MapsActivity extends AppCompatActivity
         centerpoint = new LatLng(marker.getPosition().latitude,marker.getPosition().longitude);//將選取的標記設為中心點
         finplacetype = null;//reset finplacetype
         placetype.clear();//reset placetype
-        getPlaceTypeSelected();//進行附近地點搜尋
+        getPlaceTypeSelected("np",null,null);//進行附近地點搜尋
     }
 
     //資訊視窗長按事件
@@ -635,7 +641,7 @@ public class MapsActivity extends AppCompatActivity
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
                         new AlertDialog.Builder(MapsActivity.this)
-                                .setTitle("Modify Marker Name")
+                                .setTitle("修改自訂標記名稱")
                                 .setView(item)
                                 .setCancelable(true)
                                 .setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
@@ -1080,7 +1086,7 @@ public class MapsActivity extends AppCompatActivity
                                     .build(this);
                     startActivityForResult(intent, PLACE_AUTOCOMPLETE_REQUEST_CODE);
                 } catch (GooglePlayServicesRepairableException | GooglePlayServicesNotAvailableException e) {
-                    // TODO: Handle the error.
+                    //  error.
                 }
             }
             else{
@@ -1090,7 +1096,7 @@ public class MapsActivity extends AppCompatActivity
                                     .build(this);
                     startActivityForResult(intent, PLACE_AUTOCOMPLETE_REQUEST_CODE);
                 } catch (GooglePlayServicesRepairableException | GooglePlayServicesNotAvailableException e) {
-                    // TODO: Handle the error.
+                    // error.
                 }
             }
 
@@ -1103,7 +1109,9 @@ public class MapsActivity extends AppCompatActivity
         DL = (DrawerLayout) getLayoutInflater().inflate(R.layout.activtiy_nav_drawer,null);
         FL = (FrameLayout) DL.findViewById(R.id.content_frame);
         NV = (NavigationView)DL.findViewById(R.id.Left_Navigation);
+        NV.setItemIconTintList(null);
         NP_NV = (NavigationView)DL.findViewById(R.id.Right_Navigation);
+        NP_NV.setItemIconTintList(null);
         LV = (ListView)DL.findViewById(R.id.chatlist);
         getLayoutInflater().inflate(layoutResID, FL, true);
         super.setContentView(DL);
@@ -1178,8 +1186,24 @@ public class MapsActivity extends AppCompatActivity
                         }
                         DL.closeDrawer(GravityCompat.START);
                         break;
-                    case R.id.navi:
-                        setnavi();
+                    case R.id.navi_ori:
+                        setnavi("ori");
+                        DL.closeDrawer(GravityCompat.START);
+                        break;
+                    case R.id.navi_all:
+                        setnavi("all");
+                        DL.closeDrawer(GravityCompat.START);
+                        break;
+                    case R.id.navi_customize:
+                        setnavi("customize");
+                        DL.closeDrawer(GravityCompat.START);
+                        break;
+                    case R.id.navi_cleanroute:
+                        del_polyline();
+                        DL.closeDrawer(GravityCompat.START);
+                        break;
+                    case R.id.navi_cleanstore:
+                        del_navimkr();
                         DL.closeDrawer(GravityCompat.START);
                         break;
                     case R.id.navItemAbout:
@@ -1189,10 +1213,9 @@ public class MapsActivity extends AppCompatActivity
                             overridePendingTransition(0, 0);
                             finish();*/
                         break;
-                    case R.id.test:
-                        break;
+
                     case R.id.navItemLogout:
-                        new AlertDialog.Builder(MapsActivity.this)
+                       /* new AlertDialog.Builder(MapsActivity.this)
                                 .setTitle("Logout")
                                 .setMessage("Are you sure you want to Logout?")
                                 .setPositiveButton("Yes", new DialogInterface.OnClickListener()
@@ -1208,7 +1231,7 @@ public class MapsActivity extends AppCompatActivity
 
                                 })
                                 .setNegativeButton("No", null)
-                                .show();
+                                .show();*/
                         break;
                 }
                 return false;
@@ -1253,6 +1276,8 @@ public class MapsActivity extends AppCompatActivity
                         setchatmembermenu();
                     } else if (NVrmenupage == 2) {
                         Txv2.setText(R.string.nearplacestore);
+                    } else if (NVrmenupage == 3){
+                        Txv2.setText("途經商家名單");
                     }
                 }
                 catch (Exception ex){
@@ -1427,9 +1452,16 @@ public class MapsActivity extends AppCompatActivity
                 if (mkrop != null){
                     toolbartxv.setText(mkrop.getTitle());
                     searchexec = false;
-                    searchmarker = mMap.addMarker(mkrop);
-                    searchmarker.setTag("searchmarker");
-                    searchmarker.setIcon(BitmapDescriptorFactory.defaultMarker(200));
+                    if(searchmarker == null){
+                        searchmarker = mMap.addMarker(mkrop);
+                        searchmarker.setTag("searchmarker");
+                        searchmarker.setIcon(BitmapDescriptorFactory.defaultMarker(200));
+                    }
+                    else {
+                        searchmarker.setPosition(mkrop.getPosition());
+                        searchmarker.setTitle(mkrop.getTitle());
+                        searchmarker.setSnippet(mkrop.getSnippet());
+                    }
                     mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
                             new LatLng(searchmarker.getPosition().latitude,
                                     searchmarker.getPosition().longitude), DEFAULT_ZOOM)
@@ -1701,7 +1733,7 @@ public class MapsActivity extends AppCompatActivity
                 }
                 finplacetype = null;//reset finplacetype
                 placetype.clear();//reset placetype
-                getPlaceTypeSelected();
+                getPlaceTypeSelected("np",null,null);
                 mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
                         new LatLng(centerpoint.latitude,
                                 centerpoint.longitude), DEFAULT_ZOOM)
@@ -2038,7 +2070,7 @@ public class MapsActivity extends AppCompatActivity
         mUsername=myUser.getAccount();
     }
 
-    private void getPlaceTypeSelected(){
+    private void getPlaceTypeSelected(final String mode, final LatLng start, final LatLng end ){
         final View item = LayoutInflater.from(MapsActivity.this).inflate(R.layout.placetypeselected, null);
         for(int i = 0;i<4;i++){
             placetype.add("null");
@@ -2064,16 +2096,27 @@ public class MapsActivity extends AppCompatActivity
                             }
 
                         }
-                        NearplaceReference.removeValue();
-                        del_nearplace_mkr();//Clear exist nearplace Marker
-                        NVr.getMenu().clear();//Clear right menu list
-                        NVrmenupage = 2;//set menu page: nearplace list
-                        setchatmembermenu();
-                        page = 1;//reset result page
-                        nearradius = 250 ; //default search radius
-                        String url = getDirectionsUrl(centerpoint,"250");//get search url
-                        isnavi = false ;
-                        new TransTask().execute(url);//search nearplace
+                        if(mode.equals("np")) {
+                            if(isManager) {
+                                NearplaceReference.removeValue();
+                            }
+                            del_nearplace_mkr();//Clear exist nearplace Marker
+                            NVr.getMenu().clear();//Clear right menu list
+                            NVrmenupage = 2;//set menu page: nearplace list
+                            setchatmembermenu();
+                            page = 1;//reset result page
+                            nearradius = 250; //default search radius
+                            String url = getDirectionsUrl(centerpoint, "250");//get search url
+                            isnavi = false;
+                            new TransTask().execute(url);//search nearplace
+                        }
+                        else if(mode.equals("nv")){
+                            del_navimkr();
+                            del_polyline();
+                            NVr.getMenu().clear();//Clear right menu list
+                            NVrmenupage = 3;//set menu page: nearplace list
+                            navilib(start,end,true,"customize",0);
+                        }
                     }
 
                 })
@@ -2142,6 +2185,7 @@ public class MapsActivity extends AppCompatActivity
                         placeMarker.remove();
             }
         }
+        nearplacenum = 0;
         placeMarkers = new Marker[MAX_PLACES];
     }
 
@@ -2153,7 +2197,15 @@ public class MapsActivity extends AppCompatActivity
             }
         }
         naviMarkers = new Marker[1000];
-
+    }
+    private void  del_polyline(){
+        if (navipolyline != null) {
+            for (Polyline polyline  : navipolyline) {
+                if (polyline != null)
+                    polyline.remove();
+            }
+        }
+        navipolyline = new Polyline[100];
     }
 
     private void set_manager(){
@@ -2541,32 +2593,256 @@ public class MapsActivity extends AppCompatActivity
     }
 
     //導航實作
-    private void setnavi(){
-        if(finalplacemkr == null){
-           return;
-        }
-        del_navimkr();
+    private void setnavi(final String mode){
         int size = markersList.size();
-        LatLng origin = null;
-        for(int n = 0;n<size;++n){
-            Marker mkr;
-            mkr = markersList.get(n);
-            if(Objects.equals(mkr.getTitle(), getEmail())){
-                origin = mkr.getPosition();
-            }
+        final LatLng[] origin = {null};
+        final LatLng[] customize_start = new LatLng[1];
+        final LatLng[] customize_end = new LatLng[1];
+        switch (mode){
+            case "ori":
+                if(finalplacemkr == null){
+                    return;
+                }
+                for(int n = 0;n<size;++n){
+                    Marker mkr;
+                    mkr = markersList.get(n);
+                    if(Objects.equals(mkr.getTitle(), getEmail())){
+                        origin[0] = mkr.getPosition();
+                    }
+                }
+                if (origin[0] == null){
+                    Log.i("err","origin == null");
+                    return;
+                }
+                del_polyline();
+                navilib(origin[0],finalplacemkr.getPosition(),false,mode,0);
+                break;
+            case "all":
+                if(finalplacemkr == null){
+                    return;
+                }
+                for(int n = 0;n<size;++n){
+                    Marker mkr;
+                    mkr = markersList.get(n);
+                    origin[0] = mkr.getPosition();
+                    if (origin[0] == null){
+                        Log.i("err","origin == null");
+                    }
+                    else{
+                        del_polyline();
+                        navilib(origin[0],finalplacemkr.getPosition(),false,mode,n);
+                    }
+                }
+
+                break;
+
+            case "customize":
+                final View item = LayoutInflater.from(MapsActivity.this).inflate(R.layout.navi_customize, null);
+                final String[] type = {null};
+                final String[] edtype={null};
+                start_place_spin = (Spinner)item.findViewById(R.id.start_place_spinner);
+                start_type_spin = (Spinner)item.findViewById(R.id.start_type_spinner) ;
+                end_place_spin = (Spinner)item.findViewById(R.id.end_place_spinner);
+                end_type_spin = (Spinner)item.findViewById(R.id.end_type_spinner);
+                start_place_list = new ArrayList<>();
+                start_type_list = new ArrayList<>();
+                end_place_list = new ArrayList<>();
+                end_type_list = new ArrayList<>();
+                isnavi_srchshop = false;
+                new AlertDialog.Builder(MapsActivity.this)
+                        .setTitle("進階路徑規劃")
+                        .setView(item)
+                        .setCancelable(true)
+                        .setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                if(customize_start[0].equals(customize_end[0])){
+                                    Toast.makeText(MapsActivity.this,"起終點不可以相同，請重新選擇",Toast.LENGTH_SHORT).show();
+                                }
+                                else{
+                                    if(isnavi_srchshop){
+                                        finplacetype = null;//reset finplacetype
+                                        placetype.clear();//reset placetype
+                                        getPlaceTypeSelected("nv",customize_start[0],customize_end[0]);
+                                    }
+                                    else{
+                                        del_polyline();
+                                        navilib(customize_start[0],customize_end[0],false,mode,0);
+                                    }
+                                }
+                            }
+                        })
+                        .setNeutralButton(R.string.cancel, new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                            }
+                        })
+                        .show();
+
+                if(markersList!=null&&markersList.size()!=0) {
+                    start_type_list.add("聊天室成員");
+                    end_type_list.add("聊天室成員");
+                }
+                if(UmarkerList!=null&&UmarkerList.size()!=0) {
+                    start_type_list.add("自訂標記");
+                    end_type_list.add("自訂標記");
+                }
+                if(nearplacenum > 0) {
+                    start_type_list.add("附近地點標記");
+                    end_type_list.add("附近地點標記");
+                }
+                if(searchmarker!=null) {
+                    start_type_list.add("搜尋標記");
+                    end_type_list.add("搜尋標記");
+                }
+                if(finalplacemkr!=null){
+                    start_type_list.add("最終決定地點");
+                    end_type_list.add("最終決定地點");
+                }
+                ArrayAdapter<String> adapter_st_type = new ArrayAdapter<>(MapsActivity.this,android.R.layout.simple_spinner_item, start_type_list);
+                start_type_spin.setAdapter(adapter_st_type);
+                start_type_spin.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                    @Override
+                    public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                        start_place_list.clear();
+                        type[0] = start_type_list.get(position);
+                        if(start_type_list.get(position).equals("聊天室成員")){
+                            for(int i =0;i<markersList.size();i++){
+                                start_place_list.add(markersList.get(i).getTitle());
+                            }
+                        }
+                        else if(start_type_list.get(position).equals("自訂標記")){
+                            for(int i =0;i<UmarkerList.size();i++){
+                                start_place_list.add(UmarkerList.get(i).getTitle());
+                            }
+                        }
+                        else if(start_type_list.get(position).equals("附近地點標記")){
+                            for (int i = 0;i< nearplacenum;i++) {
+                                    start_place_list.add(placeMarkers[i].getTitle());
+                            }
+                        }
+                        else if(start_type_list.get(position).equals("搜尋標記")){
+                            start_place_list.add(searchmarker.getTitle());
+                        }
+                        else if(start_type_list.get(position).equals("最終決定地點")){
+                            start_place_list.add(finalplacemkr.getTitle());
+                        }
+
+                        ArrayAdapter<String> adapter_st_place = new ArrayAdapter<>(MapsActivity.this,android.R.layout.simple_spinner_item, start_place_list);
+                        start_place_spin.setAdapter(adapter_st_place);
+                    }
+
+                    @Override
+                    public void onNothingSelected(AdapterView<?> parent) {}
+                });
+
+                start_place_spin.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                    @Override
+                    public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                        if(type[0].equals("聊天室成員")){
+                                customize_start[0] = markersList.get(position).getPosition();
+                        }
+                        else if(type[0].equals("自訂標記")){
+                                customize_start[0]= UmarkerList.get(position).getPosition();
+                        }
+                        else if(type[0].equals("附近地點標記")){
+                                customize_start[0] =placeMarkers[position].getPosition();
+                        }
+                        else if(type[0].equals("搜尋標記")){
+                            customize_start[0]=searchmarker.getPosition();
+                        }
+                        else if(type[0].equals("最終決定地點")){
+                            customize_start[0]= finalplacemkr.getPosition();
+                        }
+                    }
+
+                    @Override
+                    public void onNothingSelected(AdapterView<?> parent) {}
+                });
+
+
+
+                ArrayAdapter<String> adapter_ed = new ArrayAdapter<>(MapsActivity.this,android.R.layout.simple_spinner_item, end_type_list);
+                end_type_spin.setAdapter(adapter_ed);
+                end_type_spin.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                    @Override
+                    public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                        end_place_list.clear();
+                        edtype[0] = end_type_list.get(position);
+                        if(end_type_list.get(position).equals("聊天室成員")){
+                            for(int i =0;i<markersList.size();i++){
+                                end_place_list.add(markersList.get(i).getTitle());
+                            }
+                        }
+                        else if(end_type_list.get(position).equals("自訂標記")){
+                            for(int i =0;i<UmarkerList.size();i++){
+                                end_place_list.add(UmarkerList.get(i).getTitle());
+                            }
+                        }
+                        else if(end_type_list.get(position).equals("附近地點標記")){
+                            for (int i = 0;i< nearplacenum;i++) {
+                                end_place_list.add(placeMarkers[i].getTitle());
+                            }
+                        }
+                        else if(end_type_list.get(position).equals("搜尋標記")){
+                            end_place_list.add(searchmarker.getTitle());
+                        }
+                        else if(end_type_list.get(position).equals("最終決定地點")){
+                            end_place_list.add(finalplacemkr.getTitle());
+                        }
+
+                        ArrayAdapter<String> adapter_st_place = new ArrayAdapter<>(MapsActivity.this,android.R.layout.simple_spinner_item, end_place_list);
+                        end_place_spin.setAdapter(adapter_st_place);
+                    }
+
+                    @Override
+                    public void onNothingSelected(AdapterView<?> parent) {}
+                });
+
+                end_place_spin.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                @Override
+                public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                    if(edtype[0].equals("聊天室成員")){
+                        customize_end[0] = markersList.get(position).getPosition();
+                    }
+                    else if(edtype[0].equals("自訂標記")){
+                        customize_end[0]= UmarkerList.get(position).getPosition();
+                    }
+                    else if(edtype[0].equals("附近地點標記")){
+                        customize_end[0] =placeMarkers[position].getPosition();
+                    }
+                    else if(edtype[0].equals("搜尋標記")){
+                        customize_end[0]=searchmarker.getPosition();
+                    }
+                    else if(edtype[0].equals("最終決定地點")){
+                        customize_end[0]= finalplacemkr.getPosition();
+                    }
+                }
+                @Override
+                public void onNothingSelected(AdapterView<?> parent) {}
+                });
+
+                break;
+
         }
-        if (origin == null){
-            Log.i("err","origin == null");
-            return;
+
+    }
+
+    public void navi_srchshop(View v){
+        CheckBox checkBox = (CheckBox) v;
+        if(checkBox.isChecked()){
+            isnavi_srchshop = true;
         }
-        navilib(origin,finalplacemkr.getPosition());
+        else{
+            isnavi_srchshop = false;
+        }
     }
 
     private void set_navi_url(String lat,String lon){
         String url = "https://maps.googleapis.com/maps/api/place/nearbysearch/" +
                 "json?location="+lat+","+lon+
                 "&radius=30&sensor=true" +
-                "&types=restaurant&language=zh-TW"+
+                "&types="+finplacetype+"&language=zh-TW"+
                 "&key=AIzaSyDa5rahbohkWotgck3IDv6votMlBeMWzS8";
         isnavi = true ;
         new TransTask().execute(url);
@@ -2620,7 +2896,7 @@ public class MapsActivity extends AppCompatActivity
 
     }
 
-    private void navilib(LatLng ori,LatLng dest){
+    private void navilib(LatLng ori, LatLng dest, final Boolean searchplace,final String mode,final int num){
         String key = "AIzaSyDa5rahbohkWotgck3IDv6votMlBeMWzS8";
         GoogleDirection.withServerKey(key)
                 .from(ori)
@@ -2638,10 +2914,19 @@ public class MapsActivity extends AppCompatActivity
                     String route_dis = distanceInfo.getText();
                     String[] AfterSplit = route_dis.split(" ");
                     Double routedis =Double.parseDouble(AfterSplit[0]);
-                    if(navipolyline!=null)
-                        navipolyline.remove();
-                    navipolyline = mMap.addPolyline(DirectionConverter.createPolyline(MapsActivity.this, directionPositionList, 5, Color.RED));
-                    if(routedis <= 5.0) {
+                    switch (mode) {
+                        case "ori":
+                            navipolyline[0] = mMap.addPolyline(DirectionConverter.createPolyline(MapsActivity.this, directionPositionList, 5, Color.RED));
+                            break;
+                        case "all":
+                            navipolyline[num] = mMap.addPolyline(DirectionConverter.createPolyline(MapsActivity.this, directionPositionList, 5,
+                                    Color.parseColor(polylinecolor[num % 11])));
+                            break;
+                        case "customize":
+                            navipolyline[0] = mMap.addPolyline(DirectionConverter.createPolyline(MapsActivity.this, directionPositionList, 5, Color.RED));
+                            break;
+                    }
+                    if(routedis <= 5.0 && searchplace) {
                         navimarkernum = 0;
                         LatLng lastpoint = directionPositionList.get(0);
                         //mMap.addMarker(new MarkerOptions().position(directionPositionList.get(0)));

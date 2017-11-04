@@ -3,28 +3,61 @@
     <group android:checkableBehavior="single">
         <item
             android:id="@+id/getcenterpoint"
+            android:icon="@drawable/cookie"
             android:title="@string/getcenterpoint" />
         <item
             android:id="@+id/hidenearplace"
+            android:icon="@drawable/cookie"
             android:title="@string/hide_nearplacemarker" />
         <item
             android:id="@+id/navRealtimeLoc_Switch"
+            android:icon="@drawable/cookie"
             android:title="@string/open_realtime_access" />
         <item
             android:id="@+id/followmode"
+            android:icon="@drawable/cookie"
             android:title="@string/followmode" />
         <item
             android:id="@+id/navItemAbout"
+            android:icon="@drawable/cookie"
             android:title="@string/about" />
         <item
             android:id="@+id/navi"
-            android:title="@string/navi" />
-        <item
-            android:id="@+id/test"
-            android:title="@string/test" />
+            android:title="@string/navi">
+            <!-- "file" submenu -->
+            <menu>
+                <group android:checkableBehavior="single">
+                    <item
+                        android:id="@+id/navi_ori"
+                        android:icon="@drawable/cookies"
+                        android:title="@string/navi_ori" />
+                    <item
+                        android:id="@+id/navi_all"
+                        android:icon="@drawable/cookies"
+                        android:title="@string/navi_all" />
+                    <item
+                        android:id="@+id/navi_customize"
+                        android:icon="@drawable/cookies"
+                        android:title="@string/navi_customize" />
+                    <item
+                        android:id="@+id/navi_cleanroute"
+                        android:icon="@drawable/cookies"
+                        android:title="@string/clean_naviroute" />
+                    <item
+                        android:id="@+id/navi_cleanstore"
+                        android:icon="@drawable/cookies"
+                        android:title="@string/clean_navinearstore" />
+                </group>
+            </menu>
+        </item>
+
+
+
+
         <item
             android:id="@+id/navItemLogout"
-            android:title="@string/Logout" />
+            android:title="@string/Logout"
+            android:visible="false" />
     </group>
 
 </menu>
