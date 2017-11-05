@@ -90,7 +90,7 @@ public class MainActivity extends AppCompatActivity
         accountView = (TextView) header.findViewById(R.id.accountView);
         accountView.setText(myUser.getAccount().toString());
         nicknameView = (TextView) header.findViewById(R.id.nickname_view);
-        nicknameView.setText("");
+        nicknameView.setText(myUser.getTruenickname().toString());
         mFragmentMgr.beginTransaction().replace(R.id.container, fragment03, "fragment01").commit();
         mAdapter = new ArrayAdapter<String>(this,R.layout.friend_check_item,R.id.textfriend);
     }

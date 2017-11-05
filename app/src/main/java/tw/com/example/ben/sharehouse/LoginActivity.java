@@ -7,8 +7,10 @@ import android.support.annotation.NonNull;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.Toast;
 
 import com.firebase.client.DataSnapshot;
 import com.firebase.client.Firebase;
@@ -50,6 +52,7 @@ public class LoginActivity extends AppCompatActivity implements GoogleApiClient.
     TinyDB tinydb;         //小型資料庫  放置使用者資料
     private Firebase mFirebaseRef;
     private int flag = 0;
+    public EditText edt;
 
 
     //0819
@@ -207,12 +210,37 @@ public class LoginActivity extends AppCompatActivity implements GoogleApiClient.
                         new OnCompleteListener<AuthResult>() {
                             @Override
                             public void onComplete(@NonNull Task<AuthResult> task) {
-                                String message =
+                                /*String message =
                                         task.isComplete() ? "註冊成功" : "註冊失敗";
                                 new AlertDialog.Builder(LoginActivity.this)
                                         .setMessage(message)
                                         .setPositiveButton("OK", null)
-                                        .show();
+                                        .show();*/
+                                if(task.isComplete()){
+                                    LayoutInflater inflater = getLayoutInflater();
+                                    final View convertView = (View) inflater.inflate(R.layout.nickname_edittext,null);
+                                    edt = (EditText) convertView.findViewById(R.id.edt_nickname);
+
+                                    new AlertDialog.Builder(LoginActivity.this)
+                                            .setTitle("設定暱稱")
+                                            .setView(convertView)
+                                            .setPositiveButton("確認", new DialogInterface.OnClickListener() {
+                                                @Override
+                                                public void onClick(DialogInterface dialog, int which) {
+                                                    if( edt.getText().toString().length() == 0 ){
+                                                        Toast.makeText(LoginActivity.this,"預設暱稱為user111，請進去請做修改",Toast.LENGTH_LONG).show();
+                                                    }
+                                                }
+                                            })
+                                            .setNeutralButton("取消", null)
+                                            .show();
+                                }else{
+                                    String message = "註冊失敗";
+                                    new AlertDialog.Builder(LoginActivity.this)
+                                            .setMessage(message)
+                                            .setPositiveButton("OK", null)
+                                            .show();
+                                }
                             }
                         });
     }
@@ -224,7 +252,13 @@ public class LoginActivity extends AppCompatActivity implements GoogleApiClient.
         //新增使用者資料到  遠端使用者資料庫中 增加帳號、暱稱、房子列表，暱稱預設為UID
         DatabaseReference Ref = db.getReference("userHouseTables").child(userUID);
         String houseTable = Ref.toString();
-        MyUser myUser = new MyUser(userUID,account,houseTable,"");
+        String defaultname;
+        if(edt.getText().toString().length() == 0){
+            defaultname ="user111";
+        }else{
+            defaultname=edt.getText().toString();
+        }
+        MyUser myUser = new MyUser(userUID,account,houseTable,defaultname);
         usersRef.child(userUID).setValue(myUser);
         //新增使用者資料增加到本地資料庫中
         TinyDB tinydb = new TinyDB(this);
@@ -289,39 +323,6 @@ public class LoginActivity extends AppCompatActivity implements GoogleApiClient.
         Intent signInIntent = Auth.GoogleSignInApi.getSignInIntent(mGoogleApiClient);
         startActivityForResult(signInIntent, RC_SIGN_IN);
     }    // [END signin]
-
-
-  /*  private void updateContact(){
-        FirebaseDatabase db = FirebaseDatabase.getInstance();
-        DatabaseReference usersRef = db.getReference("users");
-        Map<String, Object> data = new HashMap<>();
-        data.put("nickname", "Hank123");
-        usersRef.child(userUID).updateChildren(data,
-                new DatabaseReference.CompletionListener() {
-                    @Override
-                    public void onComplete(DatabaseError databaseError,
-                                           DatabaseReference databaseReference) {
-                        if (databaseError!=null){
-                            //正確完成
-                        }else{
-                            //發生錯誤
-                        }
-                    }
-                });
-    }
-
-    private void pushFriend(String name){
-        FirebaseDatabase db = FirebaseDatabase.getInstance();
-        DatabaseReference usersRef = db.getReference("users");
-        DatabaseReference friendsRef = usersRef.child(userUID).child("friends").push();
-        Map<String, Object> friend = new HashMap<>();
-        friend.put("name", name);
-        friend.put("phone", "22334455");
-        friendsRef.setValue(friend);
-        String friendId = friendsRef.getKey();
-        Log.d("FRIEND", friendId+"");
-    }
-   */
 
 }
 
