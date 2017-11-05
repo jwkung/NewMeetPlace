@@ -13,13 +13,6 @@
 
     android:baselineAligned="true">
 
-    <ImageView
-        android:id="@+id/imageView"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:paddingTop="@dimen/nav_header_vertical_spacing"
-        android:src="@android:drawable/sym_def_app_icon" />
-
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -30,6 +23,19 @@
 
     <TextView
         android:id="@+id/accountView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="android.studio@android.com" />
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingTop="@dimen/nav_header_vertical_spacing"
+        android:text="暱稱"
+        android:textAppearance="@style/TextAppearance.AppCompat.Body1"
+        android:id="@+id/tv_nickname" />
+
+    <TextView
+        android:id="@+id/nickname_view"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="android.studio@android.com" />

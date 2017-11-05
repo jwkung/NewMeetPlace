@@ -1,6 +1,5 @@
 package tw.com.example.ben.sharehouse.Map;
 
-import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -2067,7 +2066,11 @@ public class MapsActivity extends AppCompatActivity
         TinyDB tinydb;
         tinydb = new TinyDB(this);
         MyUser myUser = (MyUser) tinydb.getObject("MyUser",MyUser.class);
-        mUsername=myUser.getAccount();
+        if(myUser.getNickname().toString() == null){
+            mUsername=myUser.getAccount();
+        }else{
+            mUsername=myUser.getNickname();
+        }
     }
 
     private void getPlaceTypeSelected(final String mode, final LatLng start, final LatLng end ){

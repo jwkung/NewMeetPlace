@@ -176,7 +176,12 @@ public class chat_main_layout_controler extends AppCompatActivity {
         TinyDB tinydb;
         tinydb = new TinyDB(this);
         MyUser myUser = (MyUser) tinydb.getObject("MyUser",MyUser.class);
-        mUsername=myUser.getAccount();
+        if(myUser.getNickname().toString() == null){
+            mUsername=myUser.getAccount();
+        }else{
+            mUsername=myUser.getNickname();
+        }
+
     }
     /*private void sendMessage() {
         //取得出入欄資料

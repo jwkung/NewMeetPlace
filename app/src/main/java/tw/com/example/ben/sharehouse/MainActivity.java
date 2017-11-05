@@ -16,6 +16,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.ArrayAdapter;
+import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
 
@@ -34,7 +35,7 @@ import tw.com.example.ben.sharehouse.lib.TinyDB;
 
 public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener {
-    TextView accountView;
+    TextView accountView,nicknameView;
     //fragment 變數宣告
 
     public ArrayAdapter mAdapter;
@@ -88,6 +89,8 @@ public class MainActivity extends AppCompatActivity
         View header = navigationView.getHeaderView(0);
         accountView = (TextView) header.findViewById(R.id.accountView);
         accountView.setText(myUser.getAccount().toString());
+        nicknameView = (TextView) header.findViewById(R.id.nickname_view);
+        nicknameView.setText("");
         mFragmentMgr.beginTransaction().replace(R.id.container, fragment03, "fragment01").commit();
         mAdapter = new ArrayAdapter<String>(this,R.layout.friend_check_item,R.id.textfriend);
     }
@@ -194,42 +197,33 @@ public class MainActivity extends AppCompatActivity
             //把 container layout 換成 fragment.class(使replace的方式) 最後要commit
             mFragmentMgr.beginTransaction().replace(R.id.container, fragment03, "fragment01").commit();
         }
-        if (id == R.id.nav_share){
-            mAdapter.clear();
+        if (id == R.id.nav_share){ //暱稱
             MyUser myUser= (MyUser) tinydb.getObject("MyUser", MyUser.class);
             String UserKey = myUser.getNickname();
 
             FirebaseDatabase db = FirebaseDatabase.getInstance();
-            DatabaseReference Ref = db.getReference("friends").child(UserKey);
+            final DatabaseReference Ref = db.getReference("users").child(UserKey);
 
-            Ref.addChildEventListener(new ChildEventListener() {
-                @Override
-                public void onChildAdded(DataSnapshot dataSnapshot, String s) {
-                    Log.v("friendPick",dataSnapshot.getValue(Friend.class).getName());
-                    mAdapter.add(dataSnapshot.getValue(Friend.class).getName());
-                }
-                @Override
-                public void onChildChanged(DataSnapshot dataSnapshot, String s) {}
-
-                @Override
-                public void onChildRemoved(DataSnapshot dataSnapshot) {}
-
-                @Override
-                public void onChildMoved(DataSnapshot dataSnapshot, String s) {}
-
-                @Override
-                public void onCancelled(DatabaseError databaseError) {}
-            });
-            final AlertDialog.Builder friendAlert = new AlertDialog.Builder(this);
             LayoutInflater inflater = getLayoutInflater();
-            final View convertView = (View) inflater.inflate(R.layout.friend_check,null);
-            ListView lv = (ListView) convertView.findViewById(R.id.friendlist);
-            lv.setAdapter(mAdapter);
-            lv.setItemsCanFocus(true);
-            lv.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE);
-            friendAlert.setTitle("好友列表");
-            friendAlert.setView(convertView);
-            friendAlert.show();
+            final View convertView = (View) inflater.inflate(R.layout.nickname_edittext,null);
+            final EditText edt = (EditText) convertView.findViewById(R.id.edt_nickname);
+
+            final AlertDialog.Builder nicknamealert =new AlertDialog.Builder(this);
+            nicknamealert.setTitle("修改暱稱")
+                    .setView(convertView)
+                    .setPositiveButton("確認", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            if( edt.getText().toString().length() != 0 ){
+                                Ref.child("truenickname").setValue(edt.getText().toString());
+                                nicknameView.setText(edt.getText().toString());
+                            }else{
+
+                            }
+                        }
+                    })
+                    .setNeutralButton("取消", null)
+                    .show();
             return true;
         }
         // 按了自動關閉 並回傳true

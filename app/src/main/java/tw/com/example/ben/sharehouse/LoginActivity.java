@@ -224,7 +224,7 @@ public class LoginActivity extends AppCompatActivity implements GoogleApiClient.
         //新增使用者資料到  遠端使用者資料庫中 增加帳號、暱稱、房子列表，暱稱預設為UID
         DatabaseReference Ref = db.getReference("userHouseTables").child(userUID);
         String houseTable = Ref.toString();
-        MyUser myUser = new MyUser(userUID,account,houseTable);
+        MyUser myUser = new MyUser(userUID,account,houseTable,"");
         usersRef.child(userUID).setValue(myUser);
         //新增使用者資料增加到本地資料庫中
         TinyDB tinydb = new TinyDB(this);
