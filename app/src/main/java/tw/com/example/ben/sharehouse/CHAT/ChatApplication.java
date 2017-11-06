@@ -15,6 +15,7 @@ public class ChatApplication extends android.app.Application {
     private String Change_House_Name;
     private String Search_House_Name;
     private int friendcount;
+    private boolean LoginFlag;
 
     @Override
     public void onCreate() {
@@ -40,4 +41,7 @@ public class ChatApplication extends android.app.Application {
 
     public void setSearch_House_Name(String name) {this.Search_House_Name = name;}
     public String getSearch_House_Name(){ return this.Search_House_Name;}
+
+    public void setLoginFlag(Boolean check){ this.LoginFlag = check;}
+    public boolean getLoginFlag()  { return this.LoginFlag;}
 }

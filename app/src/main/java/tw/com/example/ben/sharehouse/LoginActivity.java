@@ -35,6 +35,7 @@ import com.google.firebase.auth.GoogleAuthProvider;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 
+import tw.com.example.ben.sharehouse.CHAT.ChatApplication;
 import tw.com.example.ben.sharehouse.CHAT.dataModel.House;
 import tw.com.example.ben.sharehouse.CHAT.dataModel.MyUser;
 import tw.com.example.ben.sharehouse.lib.TinyDB;
@@ -53,6 +54,7 @@ public class LoginActivity extends AppCompatActivity implements GoogleApiClient.
     private Firebase mFirebaseRef;
     private int flag = 0;
     public EditText edt;
+    ChatApplication GV;
 
 
     //0819
@@ -68,6 +70,9 @@ public class LoginActivity extends AppCompatActivity implements GoogleApiClient.
         mainActivity = new Intent(this,MainActivity.class);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
+
+        GV = ((ChatApplication) this.getApplicationContext());
+        GV.setLoginFlag(false);
 
         //初始資料庫  用於紀錄登入狀態   1為登陸  0為未登陸
         tinydb = new TinyDB(this);
@@ -222,7 +227,7 @@ public class LoginActivity extends AppCompatActivity implements GoogleApiClient.
                                     edt = (EditText) convertView.findViewById(R.id.edt_nickname);
 
                                     new AlertDialog.Builder(LoginActivity.this)
-                                            .setTitle("設定暱稱")
+                                            .setTitle("第一次進入前設定暱稱")
                                             .setView(convertView)
                                             .setPositiveButton("確認", new DialogInterface.OnClickListener() {
                                                 @Override
@@ -234,6 +239,13 @@ public class LoginActivity extends AppCompatActivity implements GoogleApiClient.
                                             })
                                             .setNeutralButton("取消", null)
                                             .show();
+                                    GV.setLoginFlag(true);
+                                    String message = "註冊成功 請再按一次登入";
+                                    new AlertDialog.Builder(LoginActivity.this)
+                                            .setMessage(message)
+                                            .setPositiveButton("OK",null)
+                                            .show();
+
                                 }else{
                                     String message = "註冊失敗";
                                     new AlertDialog.Builder(LoginActivity.this)
@@ -252,11 +264,11 @@ public class LoginActivity extends AppCompatActivity implements GoogleApiClient.
         //新增使用者資料到  遠端使用者資料庫中 增加帳號、暱稱、房子列表，暱稱預設為UID
         DatabaseReference Ref = db.getReference("userHouseTables").child(userUID);
         String houseTable = Ref.toString();
-        String defaultname;
-        if(edt.getText().toString().length() == 0){
-            defaultname ="user111";
-        }else{
-            defaultname=edt.getText().toString();
+        String defaultname="user111";
+        if(GV.getLoginFlag() == true){
+            if(edt.getText().toString().length() != 0){
+                defaultname=edt.getText().toString();
+            }
         }
         MyUser myUser = new MyUser(userUID,account,houseTable,defaultname);
         usersRef.child(userUID).setValue(myUser);
