@@ -62,7 +62,7 @@
     <color name="black">#000000</color>
 
     <!-- White -->
-    <color name="white_rice">#EDD9CD</color>
+    <color name="white_rice">#edd9cd</color>
     <color name="white_light">#FEFEFE</color>
     <color name="white_light2">#FDF9F4</color>
 
@@ -87,7 +87,7 @@
     <color name="gray_wolf">#504A4B</color>
     <color name="gray_vampire">#565051</color>
     <color name="gray_ash">#666362</color>
-    <color name="gray_cloud">#B6B6B4</color>
+    <color name="gray_cloud">#b6b6b4</color>
     <color name="gray_light">#505767</color>
 
     <!-- yellow -->
@@ -139,7 +139,7 @@
     <color name="GJJOrange">#e98923</color>
     <color name="GJ_blue">#a763a9ef</color>
     <color name="chatroom_bk">#86beaa99</color>
-    <color name="infowindowtextcolor">#238ffa</color>
+    <color name="infowindowtextcolor">#4a2911</color>
     <color name="L_header_txv">#867f4f24</color>
     <color name="L_header_text">#dad5ce</color>
     <color name="nav_bd">#f3e7d9</color>
@@ -148,4 +148,8 @@
     <color name="primary_text_default_material_light">#867f4f24</color>
     <color name="toolbar_editext">#bdb5af</color>
     <color name="transparent">#5bf3ede3</color>
+    <color name="infowintxtbdr">#65755b42</color>
+    <color name="text_color_primary">#b67171</color>
+    <color name="listfooter_color">#86d6cac0</color>
+    <color name="primary_text_default_material_dark">#ffffff</color>
 </resources>

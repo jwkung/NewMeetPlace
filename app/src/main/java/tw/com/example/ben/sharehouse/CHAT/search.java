@@ -162,6 +162,7 @@ public class search extends AppCompatActivity implements AdapterView.OnItemClick
                                         friendcheckQuery.removeEventListener(this);
                                     }else{
                                         dataSnapshot.getRef().push().setValue(house);
+                                        flag = true;
                                     }
                                 }
                                 @Override

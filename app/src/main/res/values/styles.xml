@@ -25,7 +25,16 @@
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
         <item name="colorAccent">@color/folder_orange_light_image</item>
         <item name="android:colorBackground">@color/L_header_text</item>
+        <item name="android:windowBackground">?android:attr/colorBackground</item>
+        <item name="android:textColorPrimary">@color/nvtext</item>
 
+    </style>
+
+    <style name="MyDialogTheme" parent="Theme.AppCompat.Light.Dialog.Alert">
+        <item name="android:background">@color/white_rice</item>
+        <item name="colorPrimary">@color/folder_orange_light_image</item>
+        <item name="colorAccent">@color/folder_orange_light_image</item>
+        <item name="android:textColorPrimary">@color/infowindowtextcolor</item>
     </style>
 
 

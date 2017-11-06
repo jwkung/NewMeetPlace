@@ -206,7 +206,7 @@ public class MapsActivity extends AppCompatActivity
     private int navimarkernum;
     private Polyline[] navipolyline;
     private String[] polylinecolor={"#afff0000","#afff8000","#afffc800","#af80ff00","#af00ff00","#af00ff80","#af00ffff","#af0080ff","#af0000ff","#af8000ff","#afff00ff"};
-    private boolean isnavi_srchshop;
+    private boolean isnavi_srchshop,isnavi_showallmemeberroutes;
     private List<String> start_type_list,start_place_list,end_type_list,end_place_list;
     private Spinner start_type_spin,start_place_spin,end_type_spin,end_place_spin;
 
@@ -626,14 +626,14 @@ public class MapsActivity extends AppCompatActivity
         String t = marker.getTitle();
         final LatLng L = marker.getPosition();
         final View item = LayoutInflater.from(MapsActivity.this).inflate(R.layout.modify_mkrtitle, null);
-        new AlertDialog.Builder(MapsActivity.this)
+        new AlertDialog.Builder(MapsActivity.this,R.style.MyDialogTheme)
                 .setTitle(t)
                 .setCancelable(true)
                 .setMessage(R.string.Latitude + L.latitude + "\n" + R.string.Longtitude + L.longitude)
                 .setPositiveButton(R.string.Change_Title, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                        new AlertDialog.Builder(MapsActivity.this)
+                        new AlertDialog.Builder(MapsActivity.this,R.style.MyDialogTheme)
                                 .setTitle("修改自訂標記名稱")
                                 .setView(item)
                                 .setCancelable(true)
@@ -1196,6 +1196,8 @@ public class MapsActivity extends AppCompatActivity
                         break;
                     case R.id.navi_cleanstore:
                         del_navimkr();
+                        NVr.getMenu().clear();
+                        NVrmenupage = 1;
                         DL.closeDrawer(GravityCompat.START);
                         break;
                     case R.id.navItemAbout:
@@ -1813,7 +1815,7 @@ public class MapsActivity extends AppCompatActivity
                             }
                         }
                         int id = menuItem.getItemId();
-                        placeMarkers[id].setIcon(BitmapDescriptorFactory.defaultMarker(200));
+                        placeMarkers[id].setIcon(BitmapDescriptorFactory.defaultMarker(20));
                         placeMarkers[id].setAlpha(1.0f);
                         placeMarkers[id].showInfoWindow();
                         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
@@ -1876,7 +1878,7 @@ public class MapsActivity extends AppCompatActivity
                             }
                         }
                         int id = menuItem.getItemId();
-                        naviMarkers[id].setIcon(BitmapDescriptorFactory.defaultMarker(0));
+                        naviMarkers[id].setIcon(BitmapDescriptorFactory.defaultMarker(20));
                         naviMarkers[id].setAlpha(1.0f);
                         naviMarkers[id].showInfoWindow();
                         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
@@ -2138,7 +2140,7 @@ public class MapsActivity extends AppCompatActivity
         for(int i = 0;i<4;i++){
             placetype.add("null");
         }
-        new AlertDialog.Builder(MapsActivity.this)
+        new AlertDialog.Builder(MapsActivity.this,R.style.MyDialogTheme)
                 .setTitle("選擇地點類型")
                 .setView(item)
                 .setCancelable(true)
@@ -2175,7 +2177,6 @@ public class MapsActivity extends AppCompatActivity
                         }
                         else if(mode.equals("nv")){
                             del_navimkr();
-                            del_polyline();
                             NVr.getMenu().clear();//Clear right menu list
                             setchatmembermenu();
                             NVrmenupage = 3;//set menu page: nearplace list
@@ -2691,6 +2692,7 @@ public class MapsActivity extends AppCompatActivity
                 if(finalplacemkr == null){
                     return;
                 }
+                del_polyline();
                 for(int n = 0;n<size;++n){
                     Marker mkr;
                     mkr = markersList.get(n);
@@ -2699,7 +2701,6 @@ public class MapsActivity extends AppCompatActivity
                         Log.i("err","origin == null");
                     }
                     else{
-                        del_polyline();
                         navilib(origin[0],finalplacemkr.getPosition(),false,mode,n);
                     }
                 }
@@ -2719,7 +2720,8 @@ public class MapsActivity extends AppCompatActivity
                 end_place_list = new ArrayList<>();
                 end_type_list = new ArrayList<>();
                 isnavi_srchshop = false;
-                new AlertDialog.Builder(MapsActivity.this)
+                isnavi_showallmemeberroutes = false;
+                new AlertDialog.Builder(MapsActivity.this,R.style.MyDialogTheme)
                         .setTitle("進階路徑規劃")
                         .setView(item)
                         .setCancelable(true)
@@ -2730,13 +2732,28 @@ public class MapsActivity extends AppCompatActivity
                                     Toast.makeText(MapsActivity.this,"起終點不可以相同，請重新選擇",Toast.LENGTH_SHORT).show();
                                 }
                                 else{
+                                    del_polyline();
+                                    if(isnavi_showallmemeberroutes){
+                                        int size = markersList.size();
+                                        for(int n = 0;n<size;++n){
+                                            Marker mkr;
+                                            mkr = markersList.get(n);
+                                            origin[0] = mkr.getPosition();
+                                            if (origin[0] == null){
+                                                Log.i("err","origin == null");
+                                            }
+                                            else{
+                                                navilib(origin[0],customize_end[0],false,"all",n+1);
+                                            }
+                                        }
+
+                                    }
                                     if(isnavi_srchshop){
                                         finplacetype = null;//reset finplacetype
                                         placetype.clear();//reset placetype
                                         getPlaceTypeSelected("nv",customize_start[0],customize_end[0]);
                                     }
                                     else{
-                                        del_polyline();
                                         navilib(customize_start[0],customize_end[0],false,mode,0);
                                     }
                                 }
@@ -2907,6 +2924,19 @@ public class MapsActivity extends AppCompatActivity
             isnavi_srchshop = false;
         }
     }
+
+    public void navi_show_all_member_route(View v){
+        CheckBox checkBox = (CheckBox) v;
+        if(checkBox.isChecked()){
+            isnavi_showallmemeberroutes = true;
+        }
+        else{
+            isnavi_showallmemeberroutes = false;
+        }
+    }
+
+
+
 
     private void set_navi_url(String lat,String lon){
         String url = "https://maps.googleapis.com/maps/api/place/nearbysearch/" +

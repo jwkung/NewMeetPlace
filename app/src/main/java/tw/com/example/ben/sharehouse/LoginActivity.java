@@ -258,6 +258,7 @@ public class LoginActivity extends AppCompatActivity implements GoogleApiClient.
     }
     //將UID增加到資料庫中
     private void addContact(){
+        TinyDB tinydb = new TinyDB(this);
         House house = new House();
         FirebaseDatabase db = FirebaseDatabase.getInstance();
         DatabaseReference usersRef = db.getReference("users");
@@ -265,15 +266,19 @@ public class LoginActivity extends AppCompatActivity implements GoogleApiClient.
         DatabaseReference Ref = db.getReference("userHouseTables").child(userUID);
         String houseTable = Ref.toString();
         String defaultname="user111";
-        if(GV.getLoginFlag() == true){
+        if(GV.getLoginFlag()){
             if(edt.getText().toString().length() != 0){
                 defaultname=edt.getText().toString();
             }
         }
+        else{
+            MyUser olduser = (MyUser) tinydb.getObject("MyUser",MyUser.class);
+            String name = olduser.getTruenickname();
+            defaultname = name;
+        }
         MyUser myUser = new MyUser(userUID,account,houseTable,defaultname);
         usersRef.child(userUID).setValue(myUser);
         //新增使用者資料增加到本地資料庫中
-        TinyDB tinydb = new TinyDB(this);
         tinydb.putObject("MyUser",myUser);
 
 
