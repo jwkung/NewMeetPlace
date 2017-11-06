@@ -211,9 +211,6 @@ public class MapsActivity extends AppCompatActivity
     private Spinner start_type_spin,start_place_spin,end_type_spin,end_place_spin;
 
 
-
-
-
     // TODO: OnCreate
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -475,8 +472,6 @@ public class MapsActivity extends AppCompatActivity
 
     }
 
-
-
     /**
      * Saves the state of the map when the activity is paused.
      */
@@ -488,7 +483,6 @@ public class MapsActivity extends AppCompatActivity
             super.onSaveInstanceState(outState);
         }
     }
-
 
     /**
      * Builds the map when the Google Play services client is successfully connected.
@@ -781,8 +775,7 @@ public class MapsActivity extends AppCompatActivity
      * Handles the result of the request for location permissions.
      */
     @Override
-    public void onRequestPermissionsResult(int requestCode,
-                                           @NonNull String permissions[],
+    public void onRequestPermissionsResult(int requestCode, @NonNull String permissions[],
                                            @NonNull int[] grantResults) {
         mLocationPermissionGranted = false;
         switch (requestCode) {
@@ -1376,6 +1369,9 @@ public class MapsActivity extends AppCompatActivity
                         if (naviplaces[p-navimarkernum] != null) {
                             naviMarkers[p] = mMap.addMarker(naviplaces[p-navimarkernum]);
                             naviMarkers[p].setTag("naviplace");
+                            NavigationView nv = (NavigationView) findViewById(R.id.Right_Navigation);
+                            final Menu menu = nv.getMenu();
+                            menu.add(0, p, p, naviMarkers[p].getTitle());
                         }
                     }
                     navimarkernum += naviplaces.length;
@@ -1806,7 +1802,7 @@ public class MapsActivity extends AppCompatActivity
 
 
 
-                if (NVrmenupage == 2) {
+                else if (NVrmenupage == 2) {
                     int cp = menuItem.getGroupId();
                     if (cp == 0) {
                         for (int p = 0; p < nearplacenum; p++) {
@@ -1823,6 +1819,69 @@ public class MapsActivity extends AppCompatActivity
                         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
                                 new LatLng(placeMarkers[id].getPosition().latitude,
                                         placeMarkers[id].getPosition().longitude), DEFAULT_ZOOM)
+                        );
+                    }
+                    else if(cp == 1){
+                        int itemid = menuItem.getItemId();
+                        Marker mkr = markersList.get(itemid);
+                        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
+                                new LatLng(mkr.getPosition().latitude,
+                                        mkr.getPosition().longitude), DEFAULT_ZOOM)
+                        );
+                        mkr.showInfoWindow();
+
+                    }
+                    else if(cp == 2){
+                        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
+                                new LatLng(centerpoint.latitude,
+                                        centerpoint.longitude), DEFAULT_ZOOM)
+                        );
+                        centermarker.showInfoWindow();
+
+                    }
+                    else if (cp == 3){
+                        int itemid = menuItem.getItemId();
+                        Marker mkr = UmarkerList.get(itemid);
+                        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
+                                new LatLng(mkr.getPosition().latitude,
+                                        mkr.getPosition().longitude),DEFAULT_ZOOM)
+                        );
+                        mkr.showInfoWindow();
+                    }
+                    else if (cp == 4){
+                        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
+                                new LatLng(searchmarker.getPosition().latitude,
+                                        searchmarker.getPosition().longitude),DEFAULT_ZOOM)
+                        );
+                        searchmarker.showInfoWindow();
+                    }
+                    else if(cp == 5){
+                        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
+                                new LatLng(finalplacemkr.getPosition().latitude,
+                                        finalplacemkr.getPosition().longitude),DEFAULT_ZOOM)
+                        );
+                        finalplacemkr.showInfoWindow();
+                    }
+                    DL.closeDrawer(Gravity.END);
+                }
+
+                else if (NVrmenupage == 3) {
+                    int cp = menuItem.getGroupId();
+                    if (cp == 0) {
+                        for (int p = 0; p < navimarkernum; p++) {
+                            //will be null if a value was missing
+                            if (naviMarkers[p] != null) {
+                                naviMarkers[p].setIcon(BitmapDescriptorFactory.defaultMarker(0));
+                                naviMarkers[p].setAlpha(0.6f);
+                            }
+                        }
+                        int id = menuItem.getItemId();
+                        naviMarkers[id].setIcon(BitmapDescriptorFactory.defaultMarker(0));
+                        naviMarkers[id].setAlpha(1.0f);
+                        naviMarkers[id].showInfoWindow();
+                        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
+                                new LatLng(naviMarkers[id].getPosition().latitude,
+                                        naviMarkers[id].getPosition().longitude), DEFAULT_ZOOM)
                         );
                     }
                     else if(cp == 1){
@@ -1964,6 +2023,7 @@ public class MapsActivity extends AppCompatActivity
         mLocReference.addChildEventListener(childEventListener);
         mChildEventListener = childEventListener;
     }
+
     public void set_map_customize_mkr(){
         //0730
         ChildEventListener UmarkerchildEventListener = new ChildEventListener() {
@@ -2117,6 +2177,7 @@ public class MapsActivity extends AppCompatActivity
                             del_navimkr();
                             del_polyline();
                             NVr.getMenu().clear();//Clear right menu list
+                            setchatmembermenu();
                             NVrmenupage = 3;//set menu page: nearplace list
                             navilib(start,end,true,"customize",0);
                         }
@@ -2201,6 +2262,7 @@ public class MapsActivity extends AppCompatActivity
         }
         naviMarkers = new Marker[1000];
     }
+
     private void  del_polyline(){
         if (navipolyline != null) {
             for (Polyline polyline  : navipolyline) {
@@ -2278,6 +2340,7 @@ public class MapsActivity extends AppCompatActivity
         ManagerCameraReference.addListenerForSingleValueEvent(ManagerValueEventListener);
 
     }
+
     public  void  set_usersetting(){
         TinyDB tinydb;
         tinydb = new TinyDB(this);
@@ -2308,6 +2371,7 @@ public class MapsActivity extends AppCompatActivity
         }
 
     }
+
     public void change_usersetting(boolean b){
         TinyDB tinydb;
         tinydb = new TinyDB(this);
@@ -2467,6 +2531,7 @@ public class MapsActivity extends AppCompatActivity
         mCenterPointListener = CenterpointEventListener;
 
     }
+
     private void set_followmkr(){
         ValueEventListener FollowMarkerEventListener = new ValueEventListener() {
             @Override
@@ -2511,6 +2576,7 @@ public class MapsActivity extends AppCompatActivity
 
 
     }
+
     private void set_search_mkr(){
         ValueEventListener SearchMarkerEventListener = new ValueEventListener() {
             @Override
@@ -2572,6 +2638,7 @@ public class MapsActivity extends AppCompatActivity
         ManagerFlagReference.addValueEventListener(ManagerFlagEventListener);
         mManagerFlagEventListener = ManagerFlagEventListener;
     }
+
     private void setfabvisible(Boolean b){
         if (b){
             fabtest.show();
@@ -2850,6 +2917,7 @@ public class MapsActivity extends AppCompatActivity
         isnavi = true ;
         new TransTask().execute(url);
     }
+
     private void set_finalplace(){
 
         ChildEventListener FinalPlaceChildListener = new ChildEventListener() {
@@ -2932,11 +3000,10 @@ public class MapsActivity extends AppCompatActivity
                     if(routedis <= 5.0 && searchplace) {
                         navimarkernum = 0;
                         LatLng lastpoint = directionPositionList.get(0);
-                        //mMap.addMarker(new MarkerOptions().position(directionPositionList.get(0)));
+
                         for (int i = 1; i < directionPositionList.size(); i++) {
                             Double dis = DisConculate(lastpoint.latitude, lastpoint.longitude, directionPositionList.get(i).latitude, directionPositionList.get(i).longitude);
                             if (dis >= 60 && dis <= 120) {
-                                //mMap.addMarker(new MarkerOptions().position(directionPositionList.get(i)).icon(BitmapDescriptorFactory.defaultMarker(200)));
                                 set_navi_url(String.valueOf(directionPositionList.get(i).latitude),String.valueOf(directionPositionList.get(i).longitude));
                                 lastpoint = directionPositionList.get(i);
                             } else if (dis > 120) {
@@ -2945,10 +3012,8 @@ public class MapsActivity extends AppCompatActivity
                                 for (int j = 1; j < weight; j++) {
                                     ll = new LatLng(lastpoint.latitude + (directionPositionList.get(i).latitude - lastpoint.latitude) * j / weight,
                                             lastpoint.longitude + (directionPositionList.get(i).longitude - lastpoint.longitude) * j / weight);
-                                    //mMap.addMarker(new MarkerOptions().position(ll).icon(BitmapDescriptorFactory.defaultMarker(200)));
                                     set_navi_url(String.valueOf(ll.latitude),String.valueOf(ll.longitude));
                                 }
-                                //mMap.addMarker(new MarkerOptions().position(directionPositionList.get(i)).icon(BitmapDescriptorFactory.defaultMarker(200)));
                                 set_navi_url(String.valueOf(directionPositionList.get(i).latitude),String.valueOf(directionPositionList.get(i).longitude));
                                 lastpoint = directionPositionList.get(i);
 
@@ -2968,8 +3033,6 @@ public class MapsActivity extends AppCompatActivity
             }
         });
     }
-
-
 
 
 }
