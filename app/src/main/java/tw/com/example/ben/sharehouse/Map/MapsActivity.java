@@ -70,6 +70,7 @@ import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
+import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.auth.FirebaseAuth;
@@ -83,6 +84,7 @@ import com.google.firebase.database.ValueEventListener;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
+import com.google.maps.android.PolyUtil;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -94,6 +96,7 @@ import java.io.InputStreamReader;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
 
@@ -105,6 +108,7 @@ import tw.com.example.ben.sharehouse.LoginActivity;
 import tw.com.example.ben.sharehouse.R;
 import tw.com.example.ben.sharehouse.lib.TinyDB;
 import tw.com.example.ben.sharehouse.ui.IconSmallerOnTouchListener;
+
 
 import static android.os.SystemClock.sleep;
 
@@ -141,11 +145,13 @@ public class MapsActivity extends AppCompatActivity
     private DatabaseReference SearchmkrReference;//資料存取路徑-搜尋標記位置
     private DatabaseReference ManagerCameraReference;//資料庫存取路徑-聊天室管理者相機位置資料
     private DatabaseReference ManagerMarkerReference;//資料庫存取路徑-聊天室管理者同步畫面資料
+    private DatabaseReference ManagerPolylineReference;//資料庫存取路徑-聊天室管理者Flag
     private DatabaseReference ManagerFlagReference;//資料庫存取路徑-聊天室管理者Flag
     private DatabaseReference FinalPlaceReference;//final place
     private ChildEventListener mChildEventListener,mUMkraddChildEventListener ;//資料庫變動監聽事件(使用者位置/自訂標記)
     private ChildEventListener mNearPlaceChildEventListener;//資料庫變動監聽事件(附近地點結果資料)
     private ChildEventListener mFinalPlaceEventListener;
+    private ChildEventListener mManagerPolylineChildEventListener;
     private ValueEventListener mManagerValueEventListener;//資料庫變動監聽事件(聊天室管理者資料)
     private ValueEventListener mCenterPointListener;//資料庫變動監聽事件(中心點位置資料)
     private ValueEventListener mSearchmkrListener;//資料庫變動監聽事件(搜尋標記資料)
@@ -321,6 +327,7 @@ public class MapsActivity extends AppCompatActivity
             ManagerCameraReference = MapDatabase.getReference().child(Chatroom_Key).child("Manager").child("Camera");
             ManagerMarkerReference = MapDatabase.getReference().child(Chatroom_Key).child("Manager").child("ClickedMarker");
             ManagerFlagReference   = MapDatabase.getReference().child(Chatroom_Key).child("Manager").child("Flag");
+            ManagerPolylineReference =  MapDatabase.getReference().child(Chatroom_Key).child("Manager").child("Polyline");
             CenterpointReference = MapDatabase.getReference().child(Chatroom_Key).child("CenterPoint");
             SearchmkrReference = MapDatabase.getReference().child(Chatroom_Key).child("SearchMarker");
             mFirebaseStorage = FirebaseStorage.getInstance();
@@ -337,6 +344,7 @@ public class MapsActivity extends AppCompatActivity
             set_followmkr();//標記同步顯示-追隨模式
             set_manageflag();
             set_finalplace();
+            set_polyline();
 
             fabtest = (FloatingActionButton) findViewById( R.id.fab);
             fabtest.setOnClickListener(new View.OnClickListener() {
@@ -897,6 +905,9 @@ public class MapsActivity extends AppCompatActivity
         }
         if(finalplacemkr !=null){
             finalplacemkr.remove();
+        }
+        if( mManagerPolylineChildEventListener != null) {
+            ManagerPolylineReference.removeEventListener(mManagerPolylineChildEventListener);
         }
 
     }
@@ -3018,6 +3029,11 @@ public class MapsActivity extends AppCompatActivity
                     switch (mode) {
                         case "ori":
                             navipolyline[0] = mMap.addPolyline(DirectionConverter.createPolyline(MapsActivity.this, directionPositionList, 5, Color.RED));
+                            if(isManager){
+                                List<LatLng> line = navipolyline[0].getPoints();
+                                String s =PolyUtil.encode(line);
+                                ManagerPolylineReference.child(String.valueOf(num)).setValue(s);
+                            }
                             break;
                         case "all":
                             navipolyline[num] = mMap.addPolyline(DirectionConverter.createPolyline(MapsActivity.this, directionPositionList, 5,
@@ -3064,6 +3080,39 @@ public class MapsActivity extends AppCompatActivity
         });
     }
 
+    private void set_polyline() {
+        ChildEventListener ManagerPolylineEventListener = new ChildEventListener() {
+            @Override
+            public void onChildAdded(DataSnapshot dataSnapshot, String s) {
+                String key = dataSnapshot.getKey();
+                String line = (String) dataSnapshot.getValue();
+                List<LatLng> polyline = PolyUtil.decode(line);
+                //mMap.addPolyline(new PolylineOptions().addAll(polyline));
+            }
+
+            @Override
+            public void onChildChanged(DataSnapshot dataSnapshot, String previousChildName) {
+
+            }
+
+            @Override
+            public void onChildRemoved(DataSnapshot dataSnapshot) {
+                del_nearplace_mkr();
+            }
+
+            @Override
+            public void onChildMoved(DataSnapshot dataSnapshot, String s) {
+
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+
+            }
+        };
+        ManagerPolylineReference.addChildEventListener(ManagerPolylineEventListener);
+        mManagerPolylineChildEventListener = ManagerPolylineEventListener;
+    }
 
 }
 

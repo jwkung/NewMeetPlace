@@ -164,6 +164,7 @@
     <orderEntry type="library" name="com.google.firebase:firebase-database-connection-11.0.4" level="project" />
     <orderEntry type="library" name="com.firebase:firebase-client-jvm:2.3.1@jar" level="project" />
     <orderEntry type="library" name="com.google.android.gms:play-services-auth-base-11.0.4" level="project" />
+    <orderEntry type="library" name="com.google.maps.android:android-maps-utils-0.4.4" level="project" />
     <orderEntry type="library" name="com.android.support:appcompat-v7-25.3.1" level="project" />
     <orderEntry type="library" name="com.google.android.gms:play-services-maps-11.0.4" level="project" />
     <orderEntry type="library" name="com.squareup.okio:okio:1.6.0@jar" level="project" />

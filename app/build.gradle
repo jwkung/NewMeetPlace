@@ -51,6 +51,8 @@ dependencies {
     compile 'com.android.support.constraint:constraint-layout:1.0.2'
     compile 'com.squareup.okhttp3:okhttp:3.2.0'
     compile 'com.akexorcist:googledirectionlibrary:1.0.4'
+    //noinspection GradleDynamicVersion
+    compile 'com.google.maps.android:android-maps-utils:0.4+'
     testCompile 'junit:junit:4.12'
 }
 
