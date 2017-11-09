@@ -272,9 +272,13 @@ public class LoginActivity extends AppCompatActivity implements GoogleApiClient.
             }
         }
         else{
-            MyUser olduser = (MyUser) tinydb.getObject("MyUser",MyUser.class);
+           try{ MyUser olduser = (MyUser) tinydb.getObject("MyUser",MyUser.class);
             String name = olduser.getTruenickname();
-            defaultname = name;
+            defaultname = name;}
+            catch (Exception e){
+               Log.i("shutup","bitch");
+            }
+
         }
         MyUser myUser = new MyUser(userUID,account,houseTable,defaultname);
         usersRef.child(userUID).setValue(myUser);

@@ -165,7 +165,6 @@ public class MapsActivity extends AppCompatActivity
     public int MAX_PLACES = 60;
     private int nearradius;
     private int NVrmenupage;
-    private int nearplacenum;
     private static final int RC_PHOTO_PICKER = 2 ;
     private int[] TollBarTitle = {R.string.app_name,R.string.RealtimeLoc_Switch,R.string.about};
     public String lastkey,lastemail;
@@ -180,7 +179,7 @@ public class MapsActivity extends AppCompatActivity
     Toolbar toolbar;
     FirebaseUser currentUser;
     int locreqflag;//是否同步自身位置
-    private Marker[] placeMarkers,naviMarkers;
+    private List<Marker> placeMarkers,naviMarkers;
     private MarkerOptions[] places,naviplaces;
     int page;
     LatLng centerpoint;
@@ -210,11 +209,12 @@ public class MapsActivity extends AppCompatActivity
     private double Distance; // Distance
     private boolean isnavi,issnap;
     private int navimarkernum;
-    private Polyline[] navipolyline;
+    private List <Polyline> navipolyline;
     private String[] polylinecolor={"#afff0000","#afff8000","#afffc800","#af80ff00","#af00ff00","#af00ff80","#af00ffff","#af0080ff","#af0000ff","#af8000ff","#afff00ff"};
     private boolean isnavi_srchshop,isnavi_showallmemeberroutes;
-    private List<String> start_type_list,start_place_list,end_type_list,end_place_list;
+    private List<String> start_type_list,start_place_list,end_type_list,end_place_list,str_navipolyline;
     private Spinner start_type_spin,start_place_spin,end_type_spin,end_place_spin;
+    private TinyDB tinydbb;
 
 
     // TODO: OnCreate
@@ -276,6 +276,7 @@ public class MapsActivity extends AppCompatActivity
         }
         else {
             //使用者位置標記路徑及儲存LIST
+            tinydbb = new TinyDB(this);
             mLocReference = MapDatabase.getReference().child(Chatroom_Key).child("users");
             markersList = new ArrayList<>();
             //使用者自訂標記路徑、儲存LIST及個人自訂標記數量上限
@@ -318,9 +319,10 @@ public class MapsActivity extends AppCompatActivity
             setUpToolBar();//上方工具列功能實作
             locreqflag = 1;//同步自身位置旗標
             //附近位置儲存陣列及初始搜索半徑
-            placeMarkers = new Marker[MAX_PLACES];
-            navipolyline = new Polyline[100];
-            naviMarkers = new Marker[1000];
+            placeMarkers = new ArrayList<Marker>();
+            navipolyline = new ArrayList<Polyline>();
+            naviMarkers = new ArrayList<Marker>();
+            str_navipolyline = new ArrayList<String>();
             nearradius = 250;
             //設定相關功能資料庫路徑
             NearplaceReference = MapDatabase.getReference().child(Chatroom_Key).child("Nearplace");
@@ -345,6 +347,8 @@ public class MapsActivity extends AppCompatActivity
             set_manageflag();
             set_finalplace();
             set_polyline();
+
+
 
             fabtest = (FloatingActionButton) findViewById( R.id.fab);
             fabtest.setOnClickListener(new View.OnClickListener() {
@@ -388,11 +392,6 @@ public class MapsActivity extends AppCompatActivity
                     return true;
                 }
             });
-
-
-
-
-
         }
         //下方工作列按鈕及各項監聽實作
         send = (ImageView) findViewById(R.id.sendButton);
@@ -459,7 +458,7 @@ public class MapsActivity extends AppCompatActivity
 
         //右側導覽列、列表頁面號碼、聊天室成員列表LIST及附近地點類型LIST
         NVr = (NavigationView) findViewById(R.id.Right_Navigation);
-        NVrmenupage = 1;
+        NVrmenupage = 0;
         chatmember = new ArrayList<>();
         placetype = new ArrayList<>();
 
@@ -542,7 +541,6 @@ public class MapsActivity extends AppCompatActivity
     public void onMapReady(GoogleMap map) {
         mMap = map;
 
-
         // Use a custom info window adapter to handle multiple lines of text in the
         // info window contents.
         mMap.setInfoWindowAdapter(new GoogleMap.InfoWindowAdapter() {
@@ -585,6 +583,8 @@ public class MapsActivity extends AppCompatActivity
 
         // Get the current location of the device and set the position of the map.
         getDeviceLocation();
+        //reloaddata
+        reloaddata();
         //0730
         mMap.setOnMarkerDragListener(this);
         mMap.setOnMarkerClickListener(this);
@@ -923,6 +923,34 @@ public class MapsActivity extends AppCompatActivity
                     String.valueOf(currentCameraLon),String.valueOf(currentCameraZoom));
             tinydb.putObject("UserMapSettings", UserMapSettings);
         }
+        if(placeMarkers.size() > 0){
+            ArrayList<Nearplace> np = new ArrayList<>();
+            for(int i = 0;i<placeMarkers.size();i++){
+                Nearplace n = new Nearplace(placeMarkers.get(i).getTitle(), placeMarkers.get(i).getSnippet()
+                        , String.valueOf(placeMarkers.get(i).getPosition().latitude), String.valueOf(placeMarkers.get(i).getPosition().longitude));
+                np.add(i,n);
+            }
+            tinydb.putListNearplace(Chatroom_Key+"Nearplace",np);
+            Log.i("savenearplace : ",String.valueOf(placeMarkers.size()));
+        }
+        else{
+            tinydb.remove(Chatroom_Key+"Nearplace");
+        }
+
+        if(naviMarkers.size() > 0){
+            ArrayList<Nearplace> np = new ArrayList<>();
+            for(int i = 0;i<naviMarkers.size();i++){
+                Nearplace n = new Nearplace(naviMarkers.get(i).getTitle(), naviMarkers.get(i).getSnippet()
+                        , String.valueOf(naviMarkers.get(i).getPosition().latitude), String.valueOf(naviMarkers.get(i).getPosition().longitude));
+                np.add(i,n);
+            }
+            tinydb.putListNearplace(Chatroom_Key+"Naviplace",np);
+            Log.i("savenaviplace : ",String.valueOf(naviMarkers.size()));
+        }
+        else{
+            tinydb.remove(Chatroom_Key+"Naviplace");
+        }
+
     }
     @Override
     public void onPause(){
@@ -996,8 +1024,8 @@ public class MapsActivity extends AppCompatActivity
         if(isManager){
             choicefinalplacemkr = marker;
             if(Objects.equals(marker.getTag(), "nearplace")){
-                for (int i = 0 ; i<nearplacenum;i++) {
-                    if (Objects.equals(marker.getTitle(), placeMarkers[i].getTitle())) {
+                for (int i = 0 ; i<placeMarkers.size();i++) {
+                    if (Objects.equals(marker.getTitle(), placeMarkers.get(i).getTitle())) {
                         Sharedata sd = new Sharedata("nearplace",Integer.toString(i));
                         ManagerMarkerReference.setValue(sd);
                         return false;
@@ -1120,7 +1148,7 @@ public class MapsActivity extends AppCompatActivity
         super.setContentView(DL);
         toolbar = (Toolbar) findViewById(R.id.toolbar);
         setUpNavigation();
-        setUpNpitem();
+        setUpRightNavigation();
     }
     // TODO: nv_menu setting
     //左側導覽列實作
@@ -1137,8 +1165,6 @@ public class MapsActivity extends AppCompatActivity
 
                     case R.id.hidenearplace:
                         del_nearplace_mkr();
-                        NVr.getMenu().clear();
-                        NVrmenupage = 1;
                         DL.closeDrawer(GravityCompat.START);
                         break;
                     case R.id.navRealtimeLoc_Switch:
@@ -1207,8 +1233,6 @@ public class MapsActivity extends AppCompatActivity
                         break;
                     case R.id.navi_cleanstore:
                         del_navimkr();
-                        NVr.getMenu().clear();
-                        NVrmenupage = 1;
                         DL.closeDrawer(GravityCompat.START);
                         break;
                     case R.id.navItemAbout:
@@ -1275,14 +1299,14 @@ public class MapsActivity extends AppCompatActivity
                 TextView Txv2 =(TextView)findViewById(R.id.nv_contact_name);
                 String e = getEmail();
                 Txv.setText(e);
+                setchatmembermenu();
                 try {
-                    if (NVrmenupage == 1) {
+                    if (NVrmenupage == 0) {
                         Txv2.setText(R.string.chat_member_list);
-                        setchatmembermenu();
-                    } else if (NVrmenupage == 2) {
+                    } else if (NVrmenupage == 1) {
                         Txv2.setText(R.string.nearplacestore);
-                    } else if (NVrmenupage == 3){
-                        Txv2.setText("途經商家名單");
+                    } else if (NVrmenupage == 2){
+                        Txv2.setText(R.string.naviplacestore);
                     }
                 }
                 catch (Exception ex){
@@ -1380,11 +1404,9 @@ public class MapsActivity extends AppCompatActivity
                     for (int p =navimarkernum ; p < naviplaces.length+navimarkernum; p++) {
                         //will be null if a value was missing
                         if (naviplaces[p-navimarkernum] != null) {
-                            naviMarkers[p] = mMap.addMarker(naviplaces[p-navimarkernum]);
-                            naviMarkers[p].setTag("naviplace");
+                            naviMarkers.add(p, mMap.addMarker(naviplaces[p - navimarkernum]));
+                            naviMarkers.get(p).setTag("naviplace");
                             NavigationView nv = (NavigationView) findViewById(R.id.Right_Navigation);
-                            final Menu menu = nv.getMenu();
-                            menu.add(0, p, p, naviMarkers[p].getTitle());
                         }
                     }
                     navimarkernum += naviplaces.length;
@@ -1408,18 +1430,15 @@ public class MapsActivity extends AppCompatActivity
                     new TransTask().execute(url);
                     return;
                 }
-                if (places != null && placeMarkers != null) {
+                if (places != null) {
                     Log.i("len", Integer.toString(places.length));
                     int p;
                     int pagen = (page - 1) * 20;
-                    for (p = pagen; p < places.length + pagen && p < placeMarkers.length + pagen; p++) {
+                    for (p = pagen; p < places.length + pagen; p++) {
                         //will be null if a value was missing
                         if (places[p - pagen] != null) {
-                            placeMarkers[p] = mMap.addMarker(places[p - pagen]);
-                            placeMarkers[p].setTag("nearplace");
-                            NavigationView nv = (NavigationView) findViewById(R.id.Right_Navigation);
-                            final Menu menu = nv.getMenu();
-                            menu.add(0, p, p, placeMarkers[p].getTitle());
+                            placeMarkers.add(p,mMap.addMarker(places[p - pagen]));
+                            placeMarkers.get(p).setTag("nearplace");
                             if (isManager) {
                                 Nearplace n = new Nearplace(places[p - pagen].getTitle(), places[p - pagen].getSnippet()
                                         , String.valueOf(places[p - pagen].getPosition().latitude), String.valueOf(places[p - pagen].getPosition().longitude));
@@ -1428,7 +1447,6 @@ public class MapsActivity extends AppCompatActivity
 
                         }
                     }
-                    nearplacenum = p;
                 }
                 while (nxtstring != null) {
                     page++;
@@ -1761,185 +1779,107 @@ public class MapsActivity extends AppCompatActivity
     }
     // TODO: NV_r menu setting
     //右側導覽列實作
-    private void setUpNpitem(){
+    private void setUpRightNavigation(){
 
         NP_NV.setNavigationItemSelectedListener(new NavigationView.OnNavigationItemSelectedListener() {
             @Override
             public boolean onNavigationItemSelected(@NonNull MenuItem menuItem) {
-                if(NVrmenupage == 1){
                     //String s = (String) menuItem.getTitle();
                     int cp = menuItem.getGroupId();
-                    if(cp == 1){
-                        int itemid = menuItem.getItemId();
-                        Marker mkr = markersList.get(itemid);
-                        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
-                                new LatLng(mkr.getPosition().latitude,
-                                        mkr.getPosition().longitude), DEFAULT_ZOOM)
-                        );
-                        mkr.showInfoWindow();
-
-                    }
-                    else if(cp == 2){
-                        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
-                                new LatLng(centerpoint.latitude,
-                                        centerpoint.longitude), DEFAULT_ZOOM)
-                        );
-                        centermarker.showInfoWindow();
-
-                    }
-                    else if (cp == 3){
-                        int itemid = menuItem.getItemId();
-                        Marker mkr = UmarkerList.get(itemid);
-                        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
-                                new LatLng(mkr.getPosition().latitude,
-                                        mkr.getPosition().longitude),DEFAULT_ZOOM)
-                        );
-                        mkr.showInfoWindow();
-                    }
-                    else if (cp == 4){
-                        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
-                                new LatLng(searchmarker.getPosition().latitude,
-                                       searchmarker.getPosition().longitude),DEFAULT_ZOOM)
-                        );
-                        searchmarker.showInfoWindow();
-                    }
-                    else if(cp == 5){
-                        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
-                                new LatLng(finalplacemkr.getPosition().latitude,
-                                        finalplacemkr.getPosition().longitude),DEFAULT_ZOOM)
-                        );
-                        finalplacemkr.showInfoWindow();
-                    }
-                    DL.closeDrawer(Gravity.END);
-                }
-
-
-
-                else if (NVrmenupage == 2) {
-                    int cp = menuItem.getGroupId();
-                    if (cp == 0) {
-                        for (int p = 0; p < nearplacenum; p++) {
-                            //will be null if a value was missing
-                            if (placeMarkers[p] != null) {
-                                placeMarkers[p].setIcon(BitmapDescriptorFactory.defaultMarker(0));
-                                placeMarkers[p].setAlpha(0.6f);
-                            }
+                    if(cp == 0){
+                        TextView Txv2 =(TextView) NVr.findViewById(R.id.nv_contact_name);
+                        NVrmenupage=(NVrmenupage+1)%3;
+                        setchatmembermenu();
+                        try{
+                            if(NVrmenupage == 0)
+                                Txv2.setText(R.string.chat_member_list);
+                            else if(NVrmenupage == 1)
+                                Txv2.setText(R.string.nearplacestore);
+                            else
+                                Txv2.setText(R.string.naviplacestore);
                         }
-                        int id = menuItem.getItemId();
-                        placeMarkers[id].setIcon(BitmapDescriptorFactory.defaultMarker(20));
-                        placeMarkers[id].setAlpha(1.0f);
-                        placeMarkers[id].showInfoWindow();
-                        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
-                                new LatLng(placeMarkers[id].getPosition().latitude,
-                                        placeMarkers[id].getPosition().longitude), DEFAULT_ZOOM)
-                        );
-                    }
-                    else if(cp == 1){
-                        int itemid = menuItem.getItemId();
-                        Marker mkr = markersList.get(itemid);
-                        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
-                                new LatLng(mkr.getPosition().latitude,
-                                        mkr.getPosition().longitude), DEFAULT_ZOOM)
-                        );
-                        mkr.showInfoWindow();
-
-                    }
-                    else if(cp == 2){
-                        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
-                                new LatLng(centerpoint.latitude,
-                                        centerpoint.longitude), DEFAULT_ZOOM)
-                        );
-                        centermarker.showInfoWindow();
-
-                    }
-                    else if (cp == 3){
-                        int itemid = menuItem.getItemId();
-                        Marker mkr = UmarkerList.get(itemid);
-                        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
-                                new LatLng(mkr.getPosition().latitude,
-                                        mkr.getPosition().longitude),DEFAULT_ZOOM)
-                        );
-                        mkr.showInfoWindow();
-                    }
-                    else if (cp == 4){
-                        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
-                                new LatLng(searchmarker.getPosition().latitude,
-                                        searchmarker.getPosition().longitude),DEFAULT_ZOOM)
-                        );
-                        searchmarker.showInfoWindow();
-                    }
-                    else if(cp == 5){
-                        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
-                                new LatLng(finalplacemkr.getPosition().latitude,
-                                        finalplacemkr.getPosition().longitude),DEFAULT_ZOOM)
-                        );
-                        finalplacemkr.showInfoWindow();
-                    }
-                    DL.closeDrawer(Gravity.END);
-                }
-
-                else if (NVrmenupage == 3) {
-                    int cp = menuItem.getGroupId();
-                    if (cp == 0) {
-                        for (int p = 0; p < navimarkernum; p++) {
-                            //will be null if a value was missing
-                            if (naviMarkers[p] != null) {
-                                naviMarkers[p].setIcon(BitmapDescriptorFactory.defaultMarker(0));
-                                naviMarkers[p].setAlpha(0.6f);
-                            }
+                        catch (Exception e){
+                            Log.i("Err","");
                         }
-                        int id = menuItem.getItemId();
-                        naviMarkers[id].setIcon(BitmapDescriptorFactory.defaultMarker(20));
-                        naviMarkers[id].setAlpha(1.0f);
-                        naviMarkers[id].showInfoWindow();
-                        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
-                                new LatLng(naviMarkers[id].getPosition().latitude,
-                                        naviMarkers[id].getPosition().longitude), DEFAULT_ZOOM)
-                        );
                     }
-                    else if(cp == 1){
-                        int itemid = menuItem.getItemId();
-                        Marker mkr = markersList.get(itemid);
-                        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
-                                new LatLng(mkr.getPosition().latitude,
-                                        mkr.getPosition().longitude), DEFAULT_ZOOM)
-                        );
-                        mkr.showInfoWindow();
+                    else{
+                        if(cp == 1){
+                            int itemid = menuItem.getItemId();
+                            Marker mkr = markersList.get(itemid);
+                            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
+                                    new LatLng(mkr.getPosition().latitude,
+                                            mkr.getPosition().longitude), DEFAULT_ZOOM)
+                            );
+                            mkr.showInfoWindow();
 
-                    }
-                    else if(cp == 2){
-                        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
-                                new LatLng(centerpoint.latitude,
-                                        centerpoint.longitude), DEFAULT_ZOOM)
-                        );
-                        centermarker.showInfoWindow();
+                        }
+                        else if(cp == 2){
+                            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
+                                    new LatLng(centerpoint.latitude,
+                                            centerpoint.longitude), DEFAULT_ZOOM)
+                            );
+                            centermarker.showInfoWindow();
 
+                        }
+                        else if (cp == 3){
+                            int itemid = menuItem.getItemId();
+                            Marker mkr = UmarkerList.get(itemid);
+                            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
+                                    new LatLng(mkr.getPosition().latitude,
+                                            mkr.getPosition().longitude),DEFAULT_ZOOM)
+                            );
+                            mkr.showInfoWindow();
+                        }
+                        else if (cp == 4){
+                            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
+                                    new LatLng(searchmarker.getPosition().latitude,
+                                            searchmarker.getPosition().longitude),DEFAULT_ZOOM)
+                            );
+                            searchmarker.showInfoWindow();
+                        }
+                        else if(cp == 5){
+                            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
+                                    new LatLng(finalplacemkr.getPosition().latitude,
+                                            finalplacemkr.getPosition().longitude),DEFAULT_ZOOM)
+                            );
+                            finalplacemkr.showInfoWindow();
+                        }
+                        else if (cp == 6) {
+                            for (int p = 0; p < placeMarkers.size(); p++) {
+                                //will be null if a value was missing
+                                if (placeMarkers.get(p) != null) {
+                                    placeMarkers.get(p).setIcon(BitmapDescriptorFactory.defaultMarker(0));
+                                    placeMarkers.get(p).setAlpha(0.6f);
+                                }
+                            }
+                            int id = menuItem.getItemId();
+                            placeMarkers.get(id).setIcon(BitmapDescriptorFactory.defaultMarker(20));
+                            placeMarkers.get(id).setAlpha(1.0f);
+                            placeMarkers.get(id).showInfoWindow();
+                            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
+                                    new LatLng(placeMarkers.get(id).getPosition().latitude,
+                                            placeMarkers.get(id).getPosition().longitude), DEFAULT_ZOOM)
+                            );
+                        }
+                        else if( cp == 7){
+                            for (int p = 0; p < naviMarkers.size(); p++) {
+                                //will be null if a value was missing
+                                if (naviMarkers.get(p) != null) {
+                                    naviMarkers.get(p).setIcon(BitmapDescriptorFactory.defaultMarker(0));
+                                    naviMarkers.get(p).setAlpha(0.6f);
+                                }
+                            }
+                            int id = menuItem.getItemId();
+                            naviMarkers.get(id).setIcon(BitmapDescriptorFactory.defaultMarker(20));
+                            naviMarkers.get(id).setAlpha(1.0f);
+                            naviMarkers.get(id).showInfoWindow();
+                            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
+                                    new LatLng(naviMarkers.get(id).getPosition().latitude,
+                                            naviMarkers.get(id).getPosition().longitude), DEFAULT_ZOOM)
+                            );
+                        }
+                        DL.closeDrawer(Gravity.END);
                     }
-                    else if (cp == 3){
-                        int itemid = menuItem.getItemId();
-                        Marker mkr = UmarkerList.get(itemid);
-                        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
-                                new LatLng(mkr.getPosition().latitude,
-                                        mkr.getPosition().longitude),DEFAULT_ZOOM)
-                        );
-                        mkr.showInfoWindow();
-                    }
-                    else if (cp == 4){
-                        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
-                                new LatLng(searchmarker.getPosition().latitude,
-                                        searchmarker.getPosition().longitude),DEFAULT_ZOOM)
-                        );
-                        searchmarker.showInfoWindow();
-                    }
-                    else if(cp == 5){
-                        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
-                                new LatLng(finalplacemkr.getPosition().latitude,
-                                        finalplacemkr.getPosition().longitude),DEFAULT_ZOOM)
-                        );
-                        finalplacemkr.showInfoWindow();
-                    }
-                    DL.closeDrawer(Gravity.END);
-                }
                 return false;
             }
         });
@@ -1949,23 +1889,38 @@ public class MapsActivity extends AppCompatActivity
     private void setchatmembermenu(){
         Menu menu = NVr.getMenu();
         menu.clear();
-        for(int i = 0 ; i<chatmember.size();++i){
-            menu.add(1,i,Menu.NONE,chatmember.get(i));
-        }
-        if(centermarker!=null){
-            menu.add(2,0,Menu.NONE,"中心點");
-        }
-        if(UmarkerList.size()!=0){
-            for(int i = 0 ; i<UmarkerList.size();++i){
-                Marker mkr = UmarkerList.get(i);
-                menu.add(3,i,Menu.NONE,mkr.getTitle());
+        menu.add(0,0,Menu.NONE,"切換頁面");
+        if(NVrmenupage == 0) {
+            for (int i = 0; i < chatmember.size(); ++i) {
+                menu.add(1, i, Menu.NONE, chatmember.get(i));
+            }
+            if (centermarker != null) {
+                menu.add(2, 0, Menu.NONE, "中心點");
+            }
+            if (UmarkerList.size() > 0) {
+                for (int i = 0; i < UmarkerList.size(); ++i) {
+                    Marker mkr = UmarkerList.get(i);
+                    menu.add(3, i, Menu.NONE, mkr.getTitle());
+                }
+            }
+            if (searchmarker != null) {
+                menu.add(4, 0, Menu.NONE, searchmarker.getTitle());
+            }
+            if (finalplacemkr != null) {
+                menu.add(5, 0, Menu.NONE, finalplacemkr.getTitle() + "(fin)");
             }
         }
-        if(searchmarker != null){
-            menu.add(4,0,Menu.NONE,searchmarker.getTitle());
+        if(placeMarkers.size() > 0 && NVrmenupage == 1){
+            for(int i = 0 ; i < placeMarkers.size();++i){
+                Marker mkr = placeMarkers.get(i);
+                menu.add(6,i,Menu.NONE,mkr.getTitle());
+            }
         }
-        if(finalplacemkr != null){
-            menu.add(5,0,Menu.NONE,finalplacemkr.getTitle()+"(fin)");
+        if(naviMarkers.size() > 0 && NVrmenupage == 2){
+            for(int i = 0 ; i < naviMarkers.size();++i){
+                Marker mkr =naviMarkers.get(i);
+                menu.add(7,i,Menu.NONE,mkr.getTitle());
+            }
         }
     }
 
@@ -2178,7 +2133,6 @@ public class MapsActivity extends AppCompatActivity
                             }
                             del_nearplace_mkr();//Clear exist nearplace Marker
                             NVr.getMenu().clear();//Clear right menu list
-                            NVrmenupage = 2;//set menu page: nearplace list
                             setchatmembermenu();
                             page = 1;//reset result page
                             nearradius = 250; //default search radius
@@ -2190,7 +2144,6 @@ public class MapsActivity extends AppCompatActivity
                             del_navimkr();
                             NVr.getMenu().clear();//Clear right menu list
                             setchatmembermenu();
-                            NVrmenupage = 3;//set menu page: nearplace list
                             navilib(start,end,true,"customize",0);
                         }
                     }
@@ -2255,34 +2208,36 @@ public class MapsActivity extends AppCompatActivity
 
 
     private void del_nearplace_mkr() {
-        if (placeMarkers != null) {
-            for (Marker placeMarker : placeMarkers) {
-                if (placeMarker != null)
-                        placeMarker.remove();
-            }
+        if (placeMarkers.size() > 0) {
+            for(int i = 0 ; i<placeMarkers.size();i++)
+                placeMarkers.get(i).remove();
         }
-        nearplacenum = 0;
-        placeMarkers = new Marker[MAX_PLACES];
+        placeMarkers = new ArrayList<Marker>();
     }
 
     private void del_navimkr(){
-        if (naviMarkers != null) {
-            for (Marker naviMarker : naviMarkers) {
-                if (naviMarker != null)
-                    naviMarker.remove();
-            }
+        if (naviMarkers.size() > 0) {
+            for (int i = 0;i<naviMarkers.size();i++)
+                naviMarkers.get(i).remove();
         }
-        naviMarkers = new Marker[1000];
+        naviMarkers = new ArrayList<Marker>();
     }
 
     private void  del_polyline(){
-        if (navipolyline != null) {
-            for (Polyline polyline  : navipolyline) {
-                if (polyline != null)
-                    polyline.remove();
+        if (navipolyline.size() > 0) {
+            for (int i = 0 ; i < navipolyline.size() ; i++) {
+                navipolyline.get(i).remove();
+
             }
         }
-        navipolyline = new Polyline[100];
+        if(str_navipolyline.size() > 0){
+            for(int i = 0;i<str_navipolyline.size() ; i++){
+                str_navipolyline.remove(i);
+            }
+        }
+        tinydbb.remove(Chatroom_Key+"Polyline");
+        str_navipolyline = new ArrayList<>();
+        navipolyline = new ArrayList<Polyline>();
     }
 
     private void set_manager(){
@@ -2421,12 +2376,12 @@ public class MapsActivity extends AppCompatActivity
                     if(np!=null){
                          LatLng l = new LatLng(Double.parseDouble(np.lat),Double.parseDouble(np.lon));
                         int ky =Integer.parseInt(key);
-                        placeMarkers[ky]=mMap.addMarker(new MarkerOptions().position(l)
-                            .title(np.title)
-                            .snippet(np.vicinity)
-                            .icon(BitmapDescriptorFactory.defaultMarker(0))
-                            .draggable(false));
-                        placeMarkers[ky].setTag("nearplace");
+                        placeMarkers.add(ky, mMap.addMarker(new MarkerOptions().position(l)
+                                .title(np.title)
+                                .snippet(np.vicinity)
+                                .icon(BitmapDescriptorFactory.defaultMarker(0))
+                                .draggable(false)));
+                        placeMarkers.get(ky).setTag("nearplace");
                     }
                 }
             }
@@ -2551,7 +2506,7 @@ public class MapsActivity extends AppCompatActivity
                 Sharedata sd = dataSnapshot.getValue(Sharedata.class);
                 if(sd!=null&&isfollowmode){
                     if(Objects.equals(sd.Markertype, "nearplace")){
-                        placeMarkers[Integer.parseInt(sd.key)].showInfoWindow();
+                        placeMarkers.get(Integer.parseInt(sd.key)).showInfoWindow();
                     }
                     if(Objects.equals(sd.Markertype, "usermkr")){
                         for(int i=0 ; i<markersList.size() ; i++){
@@ -2704,17 +2659,19 @@ public class MapsActivity extends AppCompatActivity
                     return;
                 }
                 del_polyline();
-                for(int n = 0;n<size;++n){
+                for(int n = 0;n<size;n++){
                     Marker mkr;
                     mkr = markersList.get(n);
-                    origin[0] = mkr.getPosition();
-                    if (origin[0] == null){
+                    LatLng ori = mkr.getPosition();
+                    if (ori == null){
                         Log.i("err","origin == null");
                     }
                     else{
-                        navilib(origin[0],finalplacemkr.getPosition(),false,mode,n);
+                        Log.i("err",String.valueOf(n));
+                        navilib(ori,finalplacemkr.getPosition(),false,mode,n);
                     }
                 }
+
 
                 break;
 
@@ -2785,7 +2742,7 @@ public class MapsActivity extends AppCompatActivity
                     start_type_list.add("自訂標記");
                     end_type_list.add("自訂標記");
                 }
-                if(nearplacenum > 0) {
+                if(placeMarkers.size()> 0) {
                     start_type_list.add("附近地點標記");
                     end_type_list.add("附近地點標記");
                 }
@@ -2815,8 +2772,8 @@ public class MapsActivity extends AppCompatActivity
                             }
                         }
                         else if(start_type_list.get(position).equals("附近地點標記")){
-                            for (int i = 0;i< nearplacenum;i++) {
-                                    start_place_list.add(placeMarkers[i].getTitle());
+                            for (int i = 0;i< placeMarkers.size();i++) {
+                                    start_place_list.add(placeMarkers.get(i).getTitle());
                             }
                         }
                         else if(start_type_list.get(position).equals("搜尋標記")){
@@ -2844,7 +2801,7 @@ public class MapsActivity extends AppCompatActivity
                                 customize_start[0]= UmarkerList.get(position).getPosition();
                         }
                         else if(type[0].equals("附近地點標記")){
-                                customize_start[0] =placeMarkers[position].getPosition();
+                                customize_start[0] = placeMarkers.get(position).getPosition();
                         }
                         else if(type[0].equals("搜尋標記")){
                             customize_start[0]=searchmarker.getPosition();
@@ -2878,8 +2835,8 @@ public class MapsActivity extends AppCompatActivity
                             }
                         }
                         else if(end_type_list.get(position).equals("附近地點標記")){
-                            for (int i = 0;i< nearplacenum;i++) {
-                                end_place_list.add(placeMarkers[i].getTitle());
+                            for (int i = 0;i< placeMarkers.size();i++) {
+                                end_place_list.add(placeMarkers.get(i).getTitle());
                             }
                         }
                         else if(end_type_list.get(position).equals("搜尋標記")){
@@ -2907,7 +2864,7 @@ public class MapsActivity extends AppCompatActivity
                         customize_end[0]= UmarkerList.get(position).getPosition();
                     }
                     else if(edtype[0].equals("附近地點標記")){
-                        customize_end[0] =placeMarkers[position].getPosition();
+                        customize_end[0] = placeMarkers.get(position).getPosition();
                     }
                     else if(edtype[0].equals("搜尋標記")){
                         customize_end[0]=searchmarker.getPosition();
@@ -2945,9 +2902,6 @@ public class MapsActivity extends AppCompatActivity
             isnavi_showallmemeberroutes = false;
         }
     }
-
-
-
 
     private void set_navi_url(String lat,String lon){
         String url = "https://maps.googleapis.com/maps/api/place/nearbysearch/" +
@@ -3026,21 +2980,41 @@ public class MapsActivity extends AppCompatActivity
                     String route_dis = distanceInfo.getText();
                     String[] AfterSplit = route_dis.split(" ");
                     Double routedis =Double.parseDouble(AfterSplit[0]);
+                    List<LatLng> tmpline;
+                    String tmps;
                     switch (mode) {
                         case "ori":
-                            navipolyline[0] = mMap.addPolyline(DirectionConverter.createPolyline(MapsActivity.this, directionPositionList, 5, Color.RED));
+                            navipolyline.add(0, mMap.addPolyline(DirectionConverter.createPolyline(MapsActivity.this, directionPositionList, 5, Color.RED)));
+                            tmpline = navipolyline.get(0).getPoints();
+                            tmps =PolyUtil.encode(tmpline);
+                            str_navipolyline.add(0,tmps);
                             if(isManager){
-                                List<LatLng> line = navipolyline[0].getPoints();
-                                String s =PolyUtil.encode(line);
-                                ManagerPolylineReference.child(String.valueOf(num)).setValue(s);
+                                ManagerPolylineReference.child(String.valueOf(num)).setValue(tmps);
                             }
                             break;
                         case "all":
-                            navipolyline[num] = mMap.addPolyline(DirectionConverter.createPolyline(MapsActivity.this, directionPositionList, 5,
-                                    Color.parseColor(polylinecolor[num % 11])));
+                            try{
+                            navipolyline.add(num,mMap.addPolyline(DirectionConverter.createPolyline(MapsActivity.this, directionPositionList, 5,
+                                    Color.parseColor(polylinecolor[num % 11]))));
+                            tmpline = navipolyline.get(num).getPoints();
+                            tmps = PolyUtil.encode(tmpline);
+                            str_navipolyline.add(num,tmps);
+                                if(isManager){
+                                    ManagerPolylineReference.child(String.valueOf(num)).setValue(tmps);
+                                }
+                            }
+                            catch(Exception e){
+                                Log.i("indexerr","");
+                            }
                             break;
                         case "customize":
-                            navipolyline[0] = mMap.addPolyline(DirectionConverter.createPolyline(MapsActivity.this, directionPositionList, 5, Color.RED));
+                            navipolyline.add(0, mMap.addPolyline(DirectionConverter.createPolyline(MapsActivity.this, directionPositionList, 5, Color.RED)));
+                            tmpline = navipolyline.get(0).getPoints();
+                            tmps =PolyUtil.encode(tmpline);
+                            str_navipolyline.add(0,tmps);
+                            if(isManager){
+                                ManagerPolylineReference.child(String.valueOf(num)).setValue(tmps);
+                            }
                             break;
                     }
                     if(routedis <= 5.0 && searchplace) {
@@ -3065,6 +3039,12 @@ public class MapsActivity extends AppCompatActivity
 
                             }
                         }
+                    }
+                    if(navipolyline.size() > 0){
+                        ArrayList<String> s = (ArrayList<String>) str_navipolyline;
+                        tinydbb.remove(Chatroom_Key+"Polyline");
+                        tinydbb.putListString(Chatroom_Key+"Polyline", s);
+                        Log.i("save","polylinesave");
                     }
                     /*naviMarkers[p] = mMap.addMarker(naviplaces[p]);
                         naviMarkers[p].setIcon(BitmapDescriptorFactory.defaultMarker(50));
@@ -3097,7 +3077,7 @@ public class MapsActivity extends AppCompatActivity
 
             @Override
             public void onChildRemoved(DataSnapshot dataSnapshot) {
-                del_nearplace_mkr();
+
             }
 
             @Override
@@ -3114,6 +3094,58 @@ public class MapsActivity extends AppCompatActivity
         mManagerPolylineChildEventListener = ManagerPolylineEventListener;
     }
 
+    private void reloaddata(){
+        TinyDB tinydb;
+        tinydb = new TinyDB(this);
+        ArrayList<Nearplace> temp,temp2;
+        ArrayList<String>temp3;
+        temp = tinydb.getListNearplace(Chatroom_Key+"Nearplace");
+        temp2 = tinydb.getListNearplace(Chatroom_Key+"Naviplace");
+        temp3 = tinydb.getListString(Chatroom_Key+"Polyline");
+        if(temp.size()!=0){
+            for(int i = 0 ; i <temp.size();i++ ){
+                LatLng l =new LatLng (Double.parseDouble(temp.get(i).lat),Double.parseDouble(temp.get(i).lon));
+                try{
+                    MarkerOptions option = new MarkerOptions().position(l).title(temp.get(i).title).snippet(temp.get(i).vicinity);
+                    placeMarkers.add(i,mMap.addMarker(option));
+                    placeMarkers.get(i).setTag("nearplace");
+                }
+                catch (Exception e){
+                    Log.i("err:",String.valueOf(i));
+                }
+            }
+        }
+
+        if(temp2.size()!=0){
+            for(int i = 0 ; i <temp2.size();i++ ){
+                LatLng l =new LatLng (Double.parseDouble(temp2.get(i).lat),Double.parseDouble(temp2.get(i).lon));
+                try{
+                    MarkerOptions option = new MarkerOptions().position(l).title(temp2.get(i).title).snippet(temp2.get(i).vicinity);
+                    naviMarkers.add(i,mMap.addMarker(option));
+                    naviMarkers.get(i).setTag("naviplace");
+                }
+                catch (Exception e){
+                    Log.i("err:",String.valueOf(i));
+                }
+            }
+        }
+        if(temp3.size() > 0){
+            String tmpline;
+            List<LatLng> polyline;
+            for(int i = 0 ; i <temp3.size();i++ ){
+                try{
+                   str_navipolyline.add(i,temp3.get(i));
+                   polyline = PolyUtil.decode(str_navipolyline.get(i));
+                   navipolyline.add(i,mMap.addPolyline(new PolylineOptions().addAll(polyline).width(5).color(Color.parseColor(polylinecolor[i % 11]))));
+                }
+                catch (Exception e){
+                    Log.i("err:",String.valueOf(i));
+                }
+            }
+
+        }
+
+    }
 }
 
 

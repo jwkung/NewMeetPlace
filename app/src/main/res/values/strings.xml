@@ -72,6 +72,7 @@
     <string name="hide_nearplacemarker">清除所有附近點</string>
     <string name="chat_member_list">聊天室成員清單</string>
     <string name="nearplacestore">附近商家清單</string>
+    <string name="naviplacestore">沿途商家名單</string>
     <string name="restaurant">餐廳</string>
     <string name="cafestore">咖啡店</string>
     <string name="shopping_mall">百貨公司</string>
