@@ -217,8 +217,9 @@ public class MainActivity extends AppCompatActivity
                             if( edt.getText().toString().length() != 0 ){
                                 Ref.child("truenickname").setValue(edt.getText().toString());
                                 nicknameView.setText(edt.getText().toString());
-                            }else{
-
+                                MyUser myUser= (MyUser) tinydb.getObject("MyUser", MyUser.class);
+                                MyUser updateUser = new MyUser(myUser.getNickname(),myUser.getAccount(),myUser.getHouseTable(),edt.getText().toString());
+                                tinydb.putObject("MyUser",updateUser);
                             }
                         }
                     })
