@@ -151,7 +151,7 @@ public class search extends AppCompatActivity implements AdapterView.OnItemClick
                     public void onChildAdded(DataSnapshot dataSnapshot, String s) {
                         if(dataSnapshot.exists()){
                             final MyUser user = dataSnapshot.getValue(MyUser.class);
-                            final String housekey = user.getHouseTable();
+                            final String housekey = GV.getSearch_House_Name();
                             final House house= (House) tinyDB.getObject("newchatroom",House.class);
                             final String name = user.getNickname();
                             final Query friendcheckQuery = Ref.child("userHouseTables").child(name).orderByChild("url").equalTo(housekey);
@@ -159,8 +159,10 @@ public class search extends AppCompatActivity implements AdapterView.OnItemClick
                                 @Override
                                 public void onDataChange(DataSnapshot dataSnapshot) {
                                     if(dataSnapshot.exists()){
+                                        Toast.makeText( getApplicationContext() ,"朋友"+mAdapter.getItem(position)+"已經加入聊天室", Toast.LENGTH_SHORT).show();
                                         friendcheckQuery.removeEventListener(this);
                                     }else{
+                                        Toast.makeText( getApplicationContext() ,"朋友"+mAdapter.getItem(position)+"加入聊天室", Toast.LENGTH_SHORT).show();
                                         dataSnapshot.getRef().push().setValue(house);
                                         flag = true;
                                     }

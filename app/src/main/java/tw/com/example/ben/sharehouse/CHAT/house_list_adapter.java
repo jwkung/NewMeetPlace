@@ -40,7 +40,7 @@ public class house_list_adapter extends BaseAdapter{
         this.context = activity;
         mModels = new ArrayList<House>();
         mKeys = new ArrayList<String>();
-       // House = new House("Ben","123",);
+        cleanup();
         mListener = this.mRef.addChildEventListener(new ChildEventListener() {
             @Override
             public void onChildAdded(DataSnapshot dataSnapshot, String previousChildName) {
@@ -174,12 +174,9 @@ public class house_list_adapter extends BaseAdapter{
                         Log.w("TAG", "getUser:onCancelled", databaseError.toException());
                     }
                 });
-
-
     }
     public void cleanup() {
         //移除監聽器、container
-        mRef.removeEventListener(mListener);
         mModels.clear();
         mKeys.clear();
     }

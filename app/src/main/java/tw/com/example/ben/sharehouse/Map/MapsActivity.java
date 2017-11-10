@@ -80,6 +80,7 @@ import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.Query;
 import com.google.firebase.database.ValueEventListener;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
@@ -96,19 +97,18 @@ import java.io.InputStreamReader;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
 
 import tw.com.example.ben.sharehouse.CHAT.ChatApplication;
 import tw.com.example.ben.sharehouse.CHAT.FirebaseListAdapter;
 import tw.com.example.ben.sharehouse.CHAT.dataModel.Chat;
+import tw.com.example.ben.sharehouse.CHAT.dataModel.House;
 import tw.com.example.ben.sharehouse.CHAT.dataModel.MyUser;
 import tw.com.example.ben.sharehouse.LoginActivity;
 import tw.com.example.ben.sharehouse.R;
 import tw.com.example.ben.sharehouse.lib.TinyDB;
 import tw.com.example.ben.sharehouse.ui.IconSmallerOnTouchListener;
-
 
 import static android.os.SystemClock.sleep;
 
@@ -215,6 +215,7 @@ public class MapsActivity extends AppCompatActivity
     private List<String> start_type_list,start_place_list,end_type_list,end_place_list,str_navipolyline;
     private Spinner start_type_spin,start_place_spin,end_type_spin,end_place_spin;
     private TinyDB tinydbb;
+    EditText edt;
 
 
     // TODO: OnCreate
@@ -1158,6 +1159,75 @@ public class MapsActivity extends AppCompatActivity
             @Override
             public boolean onNavigationItemSelected(@NonNull MenuItem menuItem) {
                 switch (menuItem.getItemId()) {
+                    case R.id.map_add_friend:
+                        LayoutInflater inflater = getLayoutInflater();
+                        final View convertView = (View) inflater.inflate(R.layout.nickname_edittext,null);
+                        edt = (EditText) convertView.findViewById(R.id.edt_nickname);
+
+                        final FirebaseDatabase db = FirebaseDatabase.getInstance();
+                        final DatabaseReference Ref = db.getReference("users");
+
+                        new AlertDialog.Builder(MapsActivity.this)
+                                .setTitle("輸入成員帳號")
+                                .setView(convertView)
+                                .setPositiveButton("確認", new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialog, int which) {
+                                        if( edt.getText().toString().length() != 0 ){
+                                            final Query MapAddFriend = Ref.orderByChild("account").equalTo(edt.getText().toString());
+                                            MapAddFriend.addChildEventListener(new ChildEventListener() {
+                                                @Override
+                                                public void onChildAdded(DataSnapshot dataSnapshot, String s) {
+                                                    if(dataSnapshot.exists()){
+
+                                                        FirebaseDatabase db = FirebaseDatabase.getInstance();
+                                                        final DatabaseReference Refa= db.getReference();
+
+                                                        final MyUser user = dataSnapshot.getValue(MyUser.class);
+                                                        final String housekey = GV.getSearch_House_Name();
+                                                        Log.v("houseKey",housekey+"123");
+                                                        final House house= (House) tinydbb.getObject("newchatroom",House.class);
+                                                        final String name = user.getNickname();
+                                                        final Query friendcheckQuery = Refa.child("userHouseTables").child(name).orderByChild("url").equalTo(housekey);
+                                                        friendcheckQuery.addListenerForSingleValueEvent(new ValueEventListener() {
+                                                            @Override
+                                                            public void onDataChange(DataSnapshot dataSnapshot) {
+                                                                if(dataSnapshot.exists()){
+                                                                    Toast.makeText( getApplicationContext() ,"朋友"+edt.getText().toString()+"已經在聊天室中", Toast.LENGTH_SHORT).show();
+                                                                    friendcheckQuery.removeEventListener(this);
+                                                                }else{
+                                                                    Toast.makeText( getApplicationContext() ,"朋友"+edt.getText().toString()+"加入聊天室", Toast.LENGTH_SHORT).show();
+                                                                    Firebase MapAddFriend = new Firebase(user.getHouseTable());
+                                                                    MapAddFriend.push().setValue(house);
+                                                                }
+                                                            }
+                                                            @Override
+                                                            public void onCancelled(DatabaseError databaseError) {}
+                                                        });
+                                                    }else{
+                                                        MapAddFriend.removeEventListener(this);
+
+                                                    }
+                                                }
+
+                                                @Override
+                                                public void onChildChanged(DataSnapshot dataSnapshot, String s) {}
+
+                                                @Override
+                                                public void onChildRemoved(DataSnapshot dataSnapshot) {}
+
+                                                @Override
+                                                public void onChildMoved(DataSnapshot dataSnapshot, String s) {}
+
+                                                @Override
+                                                public void onCancelled(DatabaseError databaseError) {}
+                                            });
+                                        }
+                                    }
+                                })
+                                .setNeutralButton("取消", null)
+                                .show();
+                        break;
                     case R.id.getcenterpoint:
                         getcenterpoint();
                         DL.closeDrawer(GravityCompat.START);
@@ -1185,11 +1255,6 @@ public class MapsActivity extends AppCompatActivity
                             item.setTitle(R.string.close_realtime_access);
                             Log.i("locreqflag",String.valueOf(locreqflag));
                         }
-
-
-
-
-
                         DL.closeDrawer(GravityCompat.START);
                         break;
                     case R.id.followmode:
