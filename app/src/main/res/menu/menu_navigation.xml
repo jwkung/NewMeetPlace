@@ -2,6 +2,10 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <group android:checkableBehavior="single">
         <item
+            android:id="@+id/map_add_friend"
+            android:icon="@drawable/cookie"
+            android:title="@string/maps_add_friend"/>
+        <item
             android:id="@+id/getcenterpoint"
             android:icon="@drawable/cookie"
             android:title="@string/getcenterpoint" />
