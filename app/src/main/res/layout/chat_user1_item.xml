@@ -24,24 +24,27 @@
                 android:id="@+id/author"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:fontFamily="monospace"
                 android:paddingLeft="20dp"
                 android:paddingRight="8dp"
                 android:paddingTop="5dp"
-                android:textStyle="bold"
                 android:text="User1"
-                android:textSize="13sp" />
+                android:textSize="13sp"
+                android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/message"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_centerVertical="true"
-                android:paddingLeft="20dp"
-                android:maxWidth="280dp"
                 android:autoLink="web"
+                android:fontFamily="casual"
+                android:maxWidth="280dp"
+                android:paddingStart="30dp"
                 android:text="Hello"
-                android:textColor="#3ea5f9"
-                android:textSize="@dimen/normal_txt_size" />
+                android:textColor="@color/infowindowtextcolor"
+                android:textSize="20sp"
+                android:textStyle="bold" />
 
             <ImageView
                 android:id="@+id/photoImageView"

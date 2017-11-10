@@ -2094,10 +2094,10 @@ public class MapsActivity extends AppCompatActivity
         TinyDB tinydb;
         tinydb = new TinyDB(this);
         MyUser myUser = (MyUser) tinydb.getObject("MyUser",MyUser.class);
-        if(myUser.getNickname().toString() == null){
+        if(myUser.getTruenickname() == null){
             mUsername=myUser.getAccount();
         }else{
-            mUsername=myUser.getNickname();
+            mUsername=myUser.getTruenickname();
         }
     }
 
