@@ -31,7 +31,6 @@ public class MyUser {
     {
         return account;
     }
-    public void setTruenickname(String name) { this.truenickname=nickname;}
-    public String getTruenickname() { return truenickname;}
+    public String getTruenickname() { return this.truenickname;}
 
 }

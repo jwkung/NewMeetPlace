@@ -32,11 +32,11 @@ import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.GoogleAuthProvider;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 
 import tw.com.example.ben.sharehouse.CHAT.ChatApplication;
-import tw.com.example.ben.sharehouse.CHAT.dataModel.House;
 import tw.com.example.ben.sharehouse.CHAT.dataModel.MyUser;
 import tw.com.example.ben.sharehouse.lib.TinyDB;
 
@@ -200,9 +200,9 @@ public class LoginActivity extends AppCompatActivity implements GoogleApiClient.
                             account = email;
                             addContact();
                             //登陸成功
-                            startActivity(mainActivity);
+                            //startActivity(mainActivity);
                             //登陸畫面結束
-                            finish();
+                            //finish();
                         }
                     }
                 });
@@ -258,34 +258,71 @@ public class LoginActivity extends AppCompatActivity implements GoogleApiClient.
     }
     //將UID增加到資料庫中
     private void addContact(){
-        TinyDB tinydb = new TinyDB(this);
-        House house = new House();
+        final TinyDB tinydb = new TinyDB(this);
         FirebaseDatabase db = FirebaseDatabase.getInstance();
-        DatabaseReference usersRef = db.getReference("users");
+        final DatabaseReference usersRef = db.getReference("users");
         //新增使用者資料到  遠端使用者資料庫中 增加帳號、暱稱、房子列表，暱稱預設為UID
         DatabaseReference Ref = db.getReference("userHouseTables").child(userUID);
-        String houseTable = Ref.toString();
-        String defaultname="user111";
-        if(GV.getLoginFlag()){
-            if(edt.getText().toString().length() != 0){
-                defaultname=edt.getText().toString();
+        final String houseTable = Ref.toString();
+        final DatabaseReference RefCheck = db.getReference();
+        com.google.firebase.database.Query CheckFriend = RefCheck.child("users").orderByChild("account").equalTo(account);
+        CheckFriend.addListenerForSingleValueEvent(new com.google.firebase.database.ValueEventListener() {
+            @Override
+            public void onDataChange(com.google.firebase.database.DataSnapshot dataSnapshot) {
+                if(dataSnapshot.exists()){
+                    String Key = dataSnapshot.getValue().toString();
+                    String[] token = Key.split("=");
+                    StringBuffer sb = new StringBuffer();
+                    final String nickname;
+                    int check;
+                    for(int i = 0; i < token.length; i++ ){
+                        Log.v("temp",token[i]);
+                    }
+                    for(int i = 0; i < token[5].length(); i++ ){
+                        char c = token[5].charAt(i);
+                        if( c == '}'){
+                            check=i;
+                            nickname = token[5].substring(0,check);
+                            MyUser myUser = new MyUser(userUID,account,houseTable,nickname);
+                            usersRef.child(userUID).setValue(myUser);
+                            tinydb.putObject("MyUser",myUser);
+                            startActivity(mainActivity);
+                            finish();
+                            break;
+                        }
+                    }
+
+                }else{
+                    Log.v("temp","1234");
+                    String defaultname="user111";
+                    if(GV.getLoginFlag()){
+                        if(edt.getText().toString().length() != 0){
+                            defaultname=edt.getText().toString();
+                        }
+                    }
+                    else{
+                        try{ MyUser olduser = (MyUser) tinydb.getObject("MyUser",MyUser.class);
+                            String name = olduser.getTruenickname();
+                            defaultname = name;}
+                        catch (Exception e){
+                            Log.i("shutup","bitch");
+                        }
+
+                    }
+                    MyUser myUser = new MyUser(userUID,account,houseTable,defaultname);
+                    usersRef.child(userUID).setValue(myUser);
+                    //新增使用者資料增加到本地資料庫中
+                    tinydb.putObject("MyUser",myUser);
+                    startActivity(mainActivity);
+                    finish();
+                }
             }
-        }
-        else{
-           try{ MyUser olduser = (MyUser) tinydb.getObject("MyUser",MyUser.class);
-            String name = olduser.getTruenickname();
-            defaultname = name;}
-            catch (Exception e){
-               Log.i("shutup","bitch");
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+
             }
-
-        }
-        MyUser myUser = new MyUser(userUID,account,houseTable,defaultname);
-        usersRef.child(userUID).setValue(myUser);
-        //新增使用者資料增加到本地資料庫中
-        tinydb.putObject("MyUser",myUser);
-
-
+        });
     }
 
     @Override
