@@ -359,11 +359,8 @@ public class LoginActivity extends AppCompatActivity implements GoogleApiClient.
                             // Sign in success, update UI with the signed-in user's information
                             //帳號預設為信箱
                             account =mAuth.getCurrentUser().getEmail() ;
-                            addContact();
-                            //登陸成功
-                            startActivity(mainActivity);
-                            //登陸畫面結束
-                            finish();
+                            addContact();//登陸成功
+
                         } else {
                             // If sign in fails, display a message to the user.
                             Log.d("onComplete", "登入失敗");

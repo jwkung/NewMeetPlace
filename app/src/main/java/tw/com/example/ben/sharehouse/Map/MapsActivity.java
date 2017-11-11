@@ -346,13 +346,6 @@ public class MapsActivity extends AppCompatActivity
             set_usersetting();//使用者設定-是否開啟同步位置
             set_manageflag();
             set_finalplace();
-            set_manager();//管理員的地圖同步資料監聽實作-追隨模式
-            set_nearplace_mkr();//附近地點標記監聽實作-追隨模式
-            set_center_mkr();//中心點位置監聽實作-追隨模式
-            set_search_mkr();//搜尋標記監聽實作-追隨模式
-            set_followmkr();//標記同步顯示-追隨模式
-            set_polyline();//路線規劃-追隨模式
-            set_navimarker();//途經商家標記-追隨模式
 
             fabtest = (FloatingActionButton) findViewById( R.id.fab);
             fabtest.setOnClickListener(new View.OnClickListener() {
@@ -1302,6 +1295,7 @@ public class MapsActivity extends AppCompatActivity
                             item3.setVisible(true);
                             item4.setVisible(true);
                         }
+                        followmodesetting();
                         DL.closeDrawer(GravityCompat.START);
                         break;
                     case R.id.navi_ori:
@@ -2306,6 +2300,10 @@ public class MapsActivity extends AppCompatActivity
             for(int i = 0 ; i<placeMarkers.size();i++)
                 placeMarkers.get(i).remove();
         }
+        if(isManager){
+            NearplaceReference.removeValue();
+            CenterpointReference.removeValue();
+        }
         placeMarkers = new ArrayList<Marker>();
     }
 
@@ -2645,6 +2643,11 @@ public class MapsActivity extends AppCompatActivity
                                     .icon(BitmapDescriptorFactory.defaultMarker(100))
                                     .draggable(false));
                             centermarker.setTag("Centermarker");
+                        }
+                        else{
+                            if (centermarker != null) {
+                                centermarker.remove();
+                            }
                         }
                 }
 
@@ -3262,7 +3265,7 @@ public class MapsActivity extends AppCompatActivity
                             try {
                                 polyline = PolyUtil.decode(line);
                                 str_navipolyline.add(line);
-                                navipolyline.add(mMap.addPolyline(new PolylineOptions().addAll(polyline).width(5).color(Color.parseColor(polylinecolor[index % 11]))));
+                                navipolyline.add(mMap.addPolyline(new PolylineOptions().addAll(polyline).width(10).color(Color.parseColor(polylinecolor[index % 11]))));
                             } catch (Exception e) {
                                 Log.i("index_err", String.valueOf(index));
                             }
@@ -3341,7 +3344,7 @@ public class MapsActivity extends AppCompatActivity
                 try{
                    str_navipolyline.add(temp3.get(i));
                    polyline = PolyUtil.decode(str_navipolyline.get(i));
-                   navipolyline.add(mMap.addPolyline(new PolylineOptions().addAll(polyline).width(15).color(Color.parseColor(polylinecolor[i % 11]))));
+                   navipolyline.add(mMap.addPolyline(new PolylineOptions().addAll(polyline).width(10).color(Color.parseColor(polylinecolor[i % 11]))));
 
                 }
                 catch (Exception e){
@@ -3352,7 +3355,19 @@ public class MapsActivity extends AppCompatActivity
         }
 
     }
+
+    private void followmodesetting(){
+        set_manager();//管理員的地圖同步資料監聽實作-追隨模式
+        set_nearplace_mkr();//附近地點標記監聽實作-追隨模式
+        set_center_mkr();//中心點位置監聽實作-追隨模式
+        set_search_mkr();//搜尋標記監聽實作-追隨模式
+        set_followmkr();//標記同步顯示-追隨模式
+        set_polyline();//路線規劃-追隨模式
+        set_navimarker();//途經商家標記-追隨模式
+    }
 }
+
+
 
 
 

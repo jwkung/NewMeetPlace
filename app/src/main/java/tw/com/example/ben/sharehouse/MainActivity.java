@@ -85,14 +85,13 @@ public class MainActivity extends AppCompatActivity
         NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
         //左選單內顯示帳號
-        View header = navigationView.getHeaderView(0);
 
+        View header = navigationView.getHeaderView(0);
         MyUser myUser= (MyUser) tinydb.getObject("MyUser", MyUser.class);
         accountView = (TextView) header.findViewById(R.id.accountView);
         accountView.setText(myUser.getAccount().toString());
         nicknameView = (TextView) header.findViewById(R.id.nickname_view);
         nicknameView.setText(myUser.getTruenickname().toString());
-
         mFragmentMgr.beginTransaction().replace(R.id.container, fragment03, "fragment01").commit();
         mAdapter = new ArrayAdapter<String>(this,R.layout.friend_check_item,R.id.textfriend);
     }
