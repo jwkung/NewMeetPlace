@@ -179,7 +179,7 @@ public class chat_main_layout_controler extends AppCompatActivity {
         if(myUser.getNickname().toString() == null){
             mUsername=myUser.getAccount();
         }else{
-            mUsername=myUser.getNickname();
+            mUsername=myUser.getTruenickname();
         }
 
     }

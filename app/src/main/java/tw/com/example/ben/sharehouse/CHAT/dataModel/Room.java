@@ -25,7 +25,6 @@ public class Room {
     public String getNumber() {
         return number;
     }
-
     public String getAuthor() {
         return author;
     }
