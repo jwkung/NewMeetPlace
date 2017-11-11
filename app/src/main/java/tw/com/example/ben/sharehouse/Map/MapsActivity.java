@@ -148,8 +148,10 @@ public class MapsActivity extends AppCompatActivity
     private DatabaseReference ManagerPolylineReference;//資料庫存取路徑-聊天室管理者Flag
     private DatabaseReference ManagerFlagReference;//資料庫存取路徑-聊天室管理者Flag
     private DatabaseReference FinalPlaceReference;//final place
+    private DatabaseReference NaviMarkerReference;//navimarker
     private ChildEventListener mChildEventListener,mUMkraddChildEventListener ;//資料庫變動監聽事件(使用者位置/自訂標記)
     private ChildEventListener mNearPlaceChildEventListener;//資料庫變動監聽事件(附近地點結果資料)
+    private ChildEventListener mNaviMarkerChildEventListener;
     private ChildEventListener mFinalPlaceEventListener;
     private ChildEventListener mManagerPolylineChildEventListener;
     private ValueEventListener mManagerValueEventListener;//資料庫變動監聽事件(聊天室管理者資料)
@@ -216,6 +218,7 @@ public class MapsActivity extends AppCompatActivity
     private Spinner start_type_spin,start_place_spin,end_type_spin,end_place_spin;
     private TinyDB tinydbb;
     EditText edt;
+    private boolean loadbit = true;
 
 
     // TODO: OnCreate
@@ -327,6 +330,7 @@ public class MapsActivity extends AppCompatActivity
             nearradius = 250;
             //設定相關功能資料庫路徑
             NearplaceReference = MapDatabase.getReference().child(Chatroom_Key).child("Nearplace");
+            NaviMarkerReference = MapDatabase.getReference().child(Chatroom_Key).child("NaviMarker");
             ManagerCameraReference = MapDatabase.getReference().child(Chatroom_Key).child("Manager").child("Camera");
             ManagerMarkerReference = MapDatabase.getReference().child(Chatroom_Key).child("Manager").child("ClickedMarker");
             ManagerFlagReference   = MapDatabase.getReference().child(Chatroom_Key).child("Manager").child("Flag");
@@ -339,17 +343,16 @@ public class MapsActivity extends AppCompatActivity
             check_manager();//檢查誰是管理員
             set_map_member_loc();//使用者位置標記監聽實作
             set_map_customize_mkr();//使用者自訂標記監聽實作
-            set_manager();//管理員的地圖同步資料監聽實作
             set_usersetting();//使用者設定-是否開啟同步位置
+            set_manageflag();
+            set_finalplace();
+            set_manager();//管理員的地圖同步資料監聽實作-追隨模式
             set_nearplace_mkr();//附近地點標記監聽實作-追隨模式
             set_center_mkr();//中心點位置監聽實作-追隨模式
             set_search_mkr();//搜尋標記監聽實作-追隨模式
             set_followmkr();//標記同步顯示-追隨模式
-            set_manageflag();
-            set_finalplace();
-            set_polyline();
-
-
+            set_polyline();//路線規劃-追隨模式
+            set_navimarker();//途經商家標記-追隨模式
 
             fabtest = (FloatingActionButton) findViewById( R.id.fab);
             fabtest.setOnClickListener(new View.OnClickListener() {
@@ -585,7 +588,10 @@ public class MapsActivity extends AppCompatActivity
         // Get the current location of the device and set the position of the map.
         getDeviceLocation();
         //reloaddata
-        reloaddata();
+        if(loadbit){
+            reloaddata();
+            loadbit = false;
+        }
         //0730
         mMap.setOnMarkerDragListener(this);
         mMap.setOnMarkerClickListener(this);
@@ -889,6 +895,9 @@ public class MapsActivity extends AppCompatActivity
         if(mNearPlaceChildEventListener != null){
             NearplaceReference.removeEventListener(mNearPlaceChildEventListener);
         }
+        if(mNaviMarkerChildEventListener != null){
+            NaviMarkerReference.removeEventListener(mNaviMarkerChildEventListener);
+        }
         if(mCenterPointListener!=null){
             CenterpointReference.removeEventListener(mCenterPointListener);
         }
@@ -1040,6 +1049,19 @@ public class MapsActivity extends AppCompatActivity
             else if(Objects.equals(marker.getTag(), "searchmarker")){
                 Sharedata sd = new Sharedata("searchmarker","NULL");
                 ManagerMarkerReference.setValue(sd);
+            }
+            else if(Objects.equals(marker.getTag(), "FinalPlace")){
+                Sharedata sd = new Sharedata("FinalPlace","NULL");
+                ManagerMarkerReference.setValue(sd);
+            }
+            else if(Objects.equals(marker.getTag(), "naviplace")){
+                for (int i = 0 ; i<naviMarkers.size();i++) {
+                    if (Objects.equals(marker.getTitle(), naviMarkers.get(i).getTitle())) {
+                        Sharedata sd = new Sharedata("naviplace",Integer.toString(i));
+                        ManagerMarkerReference.setValue(sd);
+                        return false;
+                    }
+                }
             }
             else{
                 for(int i =0;i<markersList.size();i++){
@@ -1258,25 +1280,27 @@ public class MapsActivity extends AppCompatActivity
                         DL.closeDrawer(GravityCompat.START);
                         break;
                     case R.id.followmode:
+                        Menu m = NV.getMenu();
+                        MenuItem item = m.findItem(R.id.followmode);
+                        MenuItem item2 = m.findItem(R.id.getcenterpoint);
+                        MenuItem item3 = m.findItem(R.id.hidenearplace);
+                        MenuItem item4 = m.findItem(R.id.navi);
                         if(!isfollowmode){
                             isfollowmode = true;
-                            Menu m = NV.getMenu();
-                            MenuItem item = m.findItem(R.id.followmode);
-                            MenuItem item2 = m.findItem(R.id.getcenterpoint);
-                            MenuItem item3 = m.findItem(R.id.hidenearplace);
+                            del_navimkr();
+                            del_polyline();
+                            del_nearplace_mkr();
                             item.setTitle(R.string.closefollowmode);
                             item2.setVisible(false);
                             item3.setVisible(false);
+                            item4.setVisible(false);
                         }
                         else{
                             isfollowmode = false;
-                            Menu m = NV.getMenu();
-                            MenuItem item = m.findItem(R.id.followmode);
-                            MenuItem item2 = m.findItem(R.id.getcenterpoint);
-                            MenuItem item3 = m.findItem(R.id.hidenearplace);
                             item.setTitle(R.string.followmode);
                             item2.setVisible(true);
                             item3.setVisible(true);
+                            item4.setVisible(true);
                         }
                         DL.closeDrawer(GravityCompat.START);
                         break;
@@ -1471,7 +1495,12 @@ public class MapsActivity extends AppCompatActivity
                         if (naviplaces[p-navimarkernum] != null) {
                             naviMarkers.add(p, mMap.addMarker(naviplaces[p - navimarkernum]));
                             naviMarkers.get(p).setTag("naviplace");
-                            NavigationView nv = (NavigationView) findViewById(R.id.Right_Navigation);
+                            if(isManager) {
+                                Nearplace n = new Nearplace(naviplaces[p - navimarkernum].getTitle(), naviplaces[p - navimarkernum].getSnippet()
+                                        , String.valueOf(naviplaces[p - navimarkernum].getPosition().latitude), String.valueOf(naviplaces[p - navimarkernum].getPosition().longitude));
+                                NaviMarkerReference.child(Integer.toString(p)).setValue(n);
+                            }
+
                         }
                     }
                     navimarkernum += naviplaces.length;
@@ -2197,7 +2226,6 @@ public class MapsActivity extends AppCompatActivity
                                 NearplaceReference.removeValue();
                             }
                             del_nearplace_mkr();//Clear exist nearplace Marker
-                            NVr.getMenu().clear();//Clear right menu list
                             setchatmembermenu();
                             page = 1;//reset result page
                             nearradius = 250; //default search radius
@@ -2206,10 +2234,13 @@ public class MapsActivity extends AppCompatActivity
                             new TransTask().execute(url);//search nearplace
                         }
                         else if(mode.equals("nv")){
+                            if(isManager){
+                                NaviMarkerReference.removeValue();
+                            }
                             del_navimkr();
-                            NVr.getMenu().clear();//Clear right menu list
                             setchatmembermenu();
-                            navilib(start,end,true,"customize",0);
+                            if(!isnavi_showallmemeberroutes)
+                                navilib(start,end,true,"customize",0);
                         }
                     }
 
@@ -2264,8 +2295,6 @@ public class MapsActivity extends AppCompatActivity
                         placetype.set(3,"null");
                     }
                     break;
-
-
             }
         }
 
@@ -2300,14 +2329,16 @@ public class MapsActivity extends AppCompatActivity
                 str_navipolyline.remove(i);
             }
         }
+        if(isManager)
+            ManagerPolylineReference.removeValue();
         tinydbb.remove(Chatroom_Key+"Polyline");
         str_navipolyline = new ArrayList<>();
-        navipolyline = new ArrayList<Polyline>();
+        navipolyline = new ArrayList<>();
     }
 
     private void set_manager(){
-
-        ValueEventListener ManagerEventListener = new ValueEventListener() {
+        if(isfollowmode){
+            ValueEventListener ManagerEventListener = new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
                 Manager m = dataSnapshot.getValue(Manager.class);
@@ -2323,9 +2354,15 @@ public class MapsActivity extends AppCompatActivity
                 // Getting Post failed, log a message
                 // ...
             }
-        };
-        ManagerCameraReference.addValueEventListener(ManagerEventListener);
-        mManagerValueEventListener = ManagerEventListener;
+            };
+            ManagerCameraReference.addValueEventListener(ManagerEventListener);
+            mManagerValueEventListener = ManagerEventListener;
+        }
+        else{
+            if(mManagerValueEventListener!=null){
+                ManagerCameraReference.removeEventListener(mManagerValueEventListener);
+            }
+        }
 
 
     }
@@ -2431,49 +2468,108 @@ public class MapsActivity extends AppCompatActivity
         }
     }
 
-    private void set_nearplace_mkr() {
-        ChildEventListener NearplaceEventListener = new ChildEventListener() {
-            @Override
-            public void onChildAdded(DataSnapshot dataSnapshot, String s) {
-                if(isfollowmode){
-                    String key = dataSnapshot.getKey();
-                    Nearplace np = dataSnapshot.getValue(Nearplace.class);
-                    if(np!=null){
-                         LatLng l = new LatLng(Double.parseDouble(np.lat),Double.parseDouble(np.lon));
-                        int ky =Integer.parseInt(key);
-                        placeMarkers.add(ky, mMap.addMarker(new MarkerOptions().position(l)
-                                .title(np.title)
-                                .snippet(np.vicinity)
-                                .icon(BitmapDescriptorFactory.defaultMarker(0))
-                                .draggable(false)));
-                        placeMarkers.get(ky).setTag("nearplace");
+    private void set_navimarker(){
+        if(isfollowmode) {
+            ChildEventListener NaviMarkerEventListener = new ChildEventListener() {
+                @Override
+                public void onChildAdded(DataSnapshot dataSnapshot, String s) {
+                    if (isfollowmode) {
+                        String key = dataSnapshot.getKey();
+                        Nearplace np = dataSnapshot.getValue(Nearplace.class);
+                        if (np != null) {
+                            LatLng l = new LatLng(Double.parseDouble(np.lat), Double.parseDouble(np.lon));
+                            int ky = Integer.parseInt(key);
+                            naviMarkers.add(ky, mMap.addMarker(new MarkerOptions().position(l)
+                                    .title(np.title)
+                                    .snippet(np.vicinity)
+                                    .icon(BitmapDescriptorFactory.defaultMarker(0))
+                                    .draggable(false)));
+                            naviMarkers.get(ky).setTag("naviplace");
+                        }
                     }
                 }
+
+                @Override
+                public void onChildChanged(DataSnapshot dataSnapshot, String previousChildName) {
+
+                }
+
+                @Override
+                public void onChildRemoved(DataSnapshot dataSnapshot) {
+                    del_nearplace_mkr();
+                }
+
+                @Override
+                public void onChildMoved(DataSnapshot dataSnapshot, String s) {
+
+                }
+
+                @Override
+                public void onCancelled(DatabaseError databaseError) {
+
+                }
+            };
+            NaviMarkerReference.addChildEventListener(NaviMarkerEventListener);
+            mNaviMarkerChildEventListener = NaviMarkerEventListener;
+        }
+        else{
+            if(mNaviMarkerChildEventListener != null){
+                NaviMarkerReference.removeEventListener(mNaviMarkerChildEventListener);
             }
+        }
 
-            @Override
-            public void onChildChanged(DataSnapshot dataSnapshot, String previousChildName) {
+    }
 
+    private void set_nearplace_mkr() {
+        if(isfollowmode) {
+            ChildEventListener NearplaceEventListener = new ChildEventListener() {
+                @Override
+                public void onChildAdded(DataSnapshot dataSnapshot, String s) {
+                    if (isfollowmode) {
+                        String key = dataSnapshot.getKey();
+                        Nearplace np = dataSnapshot.getValue(Nearplace.class);
+                        if (np != null) {
+                            LatLng l = new LatLng(Double.parseDouble(np.lat), Double.parseDouble(np.lon));
+                            int ky = Integer.parseInt(key);
+                            placeMarkers.add(ky, mMap.addMarker(new MarkerOptions().position(l)
+                                    .title(np.title)
+                                    .snippet(np.vicinity)
+                                    .icon(BitmapDescriptorFactory.defaultMarker(0))
+                                    .draggable(false)));
+                            placeMarkers.get(ky).setTag("nearplace");
+                        }
+                    }
+                }
+
+                @Override
+                public void onChildChanged(DataSnapshot dataSnapshot, String previousChildName) {
+
+                }
+
+                @Override
+                public void onChildRemoved(DataSnapshot dataSnapshot) {
+                    del_nearplace_mkr();
+                }
+
+                @Override
+                public void onChildMoved(DataSnapshot dataSnapshot, String s) {
+
+                }
+
+                @Override
+                public void onCancelled(DatabaseError databaseError) {
+
+                }
+            };
+
+            NearplaceReference.addChildEventListener(NearplaceEventListener);
+            mNearPlaceChildEventListener = NearplaceEventListener;
+        }
+        else{
+            if(mNearPlaceChildEventListener != null){
+                NearplaceReference.removeEventListener(mNearPlaceChildEventListener);
             }
-
-            @Override
-            public void onChildRemoved(DataSnapshot dataSnapshot) {
-                del_nearplace_mkr();
-            }
-
-            @Override
-            public void onChildMoved(DataSnapshot dataSnapshot, String s) {
-
-            }
-
-            @Override
-            public void onCancelled(DatabaseError databaseError) {
-
-            }
-        };
-
-        NearplaceReference.addChildEventListener(NearplaceEventListener);
-        mNearPlaceChildEventListener = NearplaceEventListener;
+        }
     }
 
     @Override
@@ -2534,109 +2630,132 @@ public class MapsActivity extends AppCompatActivity
     }
 
     private void set_center_mkr(){
-        ValueEventListener CenterpointEventListener = new ValueEventListener() {
-            @Override
-            public void onDataChange(DataSnapshot dataSnapshot) {
-                if (isfollowmode) {
-                    CenterPoint cp = dataSnapshot.getValue(CenterPoint.class);
-                    if (cp != null) {
-                        if (centermarker != null) {
-                            centermarker.remove();
+        if(isfollowmode) {
+            ValueEventListener CenterpointEventListener = new ValueEventListener() {
+                @Override
+                public void onDataChange(DataSnapshot dataSnapshot) {
+                         CenterPoint cp = dataSnapshot.getValue(CenterPoint.class);
+                        if (cp != null) {
+                            if (centermarker != null) {
+                                centermarker.remove();
+                            }
+                            centerpoint = new LatLng(Double.parseDouble(cp.lat), Double.parseDouble(cp.lon));
+                            centermarker = mMap.addMarker(new MarkerOptions().position(centerpoint)
+                                    .title("Center Point ")
+                                    .icon(BitmapDescriptorFactory.defaultMarker(100))
+                                    .draggable(false));
+                            centermarker.setTag("Centermarker");
                         }
-                        centerpoint = new LatLng(Double.parseDouble(cp.lat),Double.parseDouble(cp.lon));
-                        centermarker = mMap.addMarker(new MarkerOptions().position(centerpoint)
-                                .title("Center Point ")
-                                .icon(BitmapDescriptorFactory.defaultMarker(100))
-                                .draggable(false));
-                        centermarker.setTag("Centermarker");
-                    }
                 }
-            }
 
-            @Override
-            public void onCancelled(DatabaseError databaseError) {
-                // Getting Post failed, log a message
-                // ...
+                @Override
+                public void onCancelled(DatabaseError databaseError) {
+                    // Getting Post failed, log a message
+                    // ...
+                }
+            };
+            CenterpointReference.addValueEventListener(CenterpointEventListener);
+            mCenterPointListener = CenterpointEventListener;
+        }
+        else{
+            if(mCenterPointListener!=null){
+                CenterpointReference.removeEventListener(mCenterPointListener);
             }
-        };
-        CenterpointReference.addValueEventListener(CenterpointEventListener);
-        mCenterPointListener = CenterpointEventListener;
+        }
 
     }
 
     private void set_followmkr(){
-        ValueEventListener FollowMarkerEventListener = new ValueEventListener() {
-            @Override
-            public void onDataChange(DataSnapshot dataSnapshot) {
-                Sharedata sd = dataSnapshot.getValue(Sharedata.class);
-                if(sd!=null&&isfollowmode){
-                    if(Objects.equals(sd.Markertype, "nearplace")){
-                        placeMarkers.get(Integer.parseInt(sd.key)).showInfoWindow();
-                    }
-                    if(Objects.equals(sd.Markertype, "usermkr")){
-                        for(int i=0 ; i<markersList.size() ; i++){
-                            if(Objects.equals(sd.key,markersList.get(i).getTag())){
-                                markersList.get(i).showInfoWindow();
+        if(isfollowmode) {
+            ValueEventListener FollowMarkerEventListener = new ValueEventListener() {
+                @Override
+                public void onDataChange(DataSnapshot dataSnapshot) {
+                    Sharedata sd = dataSnapshot.getValue(Sharedata.class);
+                    if (sd != null) {
+                        if (Objects.equals(sd.Markertype, "nearplace")) {
+                            placeMarkers.get(Integer.parseInt(sd.key)).showInfoWindow();
+                        }
+                        else if (Objects.equals(sd.Markertype, "naviplace")) {
+                            naviMarkers.get(Integer.parseInt(sd.key)).showInfoWindow();
+                        }
+                        else if (Objects.equals(sd.Markertype, "usermkr")) {
+                            for (int i = 0; i < markersList.size(); i++) {
+                                if (Objects.equals(sd.key, markersList.get(i).getTag())) {
+                                    markersList.get(i).showInfoWindow();
+                                }
                             }
                         }
-                    }
-                    if(Objects.equals(sd.Markertype, "Customizemkr")){
-                        for(int i=0 ; i<UmarkerList.size() ; i++){
-                            if(Objects.equals(sd.key,UmarkerList.get(i).getTag())){
-                                UmarkerList.get(i).showInfoWindow();
+                        else if (Objects.equals(sd.Markertype, "Customizemkr")) {
+                            for (int i = 0; i < UmarkerList.size(); i++) {
+                                if (Objects.equals(sd.key, UmarkerList.get(i).getTag())) {
+                                    UmarkerList.get(i).showInfoWindow();
+                                }
                             }
                         }
-                    }
-                    if(Objects.equals(sd.Markertype, "Centermarker")){
-                        centermarker.showInfoWindow();
-                    }
-                    if(Objects.equals(sd.Markertype, "searchmarker")){
-                        searchmarker.showInfoWindow();
-                    }
+                        else if (Objects.equals(sd.Markertype, "Centermarker")) {
+                            centermarker.showInfoWindow();
+                        }
+                        else if (Objects.equals(sd.Markertype, "searchmarker")) {
+                            searchmarker.showInfoWindow();
+                        }
+                        else if (Objects.equals(sd.Markertype, "FinalPlace")) {
+                            finalplacemkr.showInfoWindow();
+                        }
 
+                    }
                 }
-            }
 
-            @Override
-            public void onCancelled(DatabaseError databaseError) {
-                // Getting Post failed, log a message
-                // ...
+                @Override
+                public void onCancelled(DatabaseError databaseError) {
+                    // Getting Post failed, log a message
+                    // ...
+                }
+            };
+            ManagerMarkerReference.addValueEventListener(FollowMarkerEventListener);
+            mFollowMarkerValueEventListener = FollowMarkerEventListener;
+        }
+        else {
+            if(mFollowMarkerValueEventListener != null){
+                ManagerMarkerReference.removeEventListener(mFollowMarkerValueEventListener);
             }
-        };
-        ManagerMarkerReference.addValueEventListener(FollowMarkerEventListener);
-        mFollowMarkerValueEventListener=FollowMarkerEventListener;
+        }
 
 
     }
 
     private void set_search_mkr(){
-        ValueEventListener SearchMarkerEventListener = new ValueEventListener() {
-            @Override
-            public void onDataChange(DataSnapshot dataSnapshot) {
-                if (isfollowmode) {
-                    Nearplace searchmkr = dataSnapshot.getValue(Nearplace.class);
-                    if (searchmkr != null) {
-                        if (searchmarker != null) {
-                            searchmarker.remove();
+        if(isfollowmode) {
+            ValueEventListener SearchMarkerEventListener = new ValueEventListener() {
+                @Override
+                public void onDataChange(DataSnapshot dataSnapshot) {
+                        Nearplace searchmkr = dataSnapshot.getValue(Nearplace.class);
+                        if (searchmkr != null) {
+                            if (searchmarker != null) {
+                                searchmarker.remove();
+                            }
+                            searchmarker = mMap.addMarker(new MarkerOptions().position(new LatLng(Double.parseDouble(searchmkr.lat), Double.parseDouble(searchmkr.lon)))
+                                    .title(searchmkr.title)
+                                    .snippet(searchmkr.vicinity)
+                                    .icon(BitmapDescriptorFactory.defaultMarker(200))
+                                    .draggable(false));
+                            searchmarker.setTag("searchmarker");
                         }
-                        searchmarker = mMap.addMarker(new MarkerOptions().position(new LatLng(Double.parseDouble(searchmkr.lat),Double.parseDouble(searchmkr.lon)))
-                                .title(searchmkr.title)
-                                .snippet(searchmkr.vicinity)
-                                .icon(BitmapDescriptorFactory.defaultMarker(200))
-                                .draggable(false));
-                        searchmarker.setTag("searchmarker");
-                    }
                 }
-            }
 
-            @Override
-            public void onCancelled(DatabaseError databaseError) {
-                // Getting Post failed, log a message
-                // ...
+                @Override
+                public void onCancelled(DatabaseError databaseError) {
+                    // Getting Post failed, log a message
+                    // ...
+                }
+            };
+            SearchmkrReference.addValueEventListener(SearchMarkerEventListener);
+            mSearchmkrListener = SearchMarkerEventListener;
+        }
+        else {
+            if(mSearchmkrListener != null){
+                SearchmkrReference.removeEventListener(mSearchmkrListener);
             }
-        };
-         SearchmkrReference.addValueEventListener(SearchMarkerEventListener);
-         mSearchmkrListener= SearchMarkerEventListener;
+        }
     }
 
     private void set_manageflag() {
@@ -2766,6 +2885,15 @@ public class MapsActivity extends AppCompatActivity
                                 }
                                 else{
                                     del_polyline();
+                                    if(isnavi_srchshop){
+                                        finplacetype = null;//reset finplacetype
+                                        placetype.clear();//reset placetype
+                                        getPlaceTypeSelected("nv",customize_start[0],customize_end[0]);
+                                    }
+                                    else{
+                                        if(!isnavi_showallmemeberroutes)
+                                            navilib(customize_start[0],customize_end[0],false,mode,0);
+                                    }
                                     if(isnavi_showallmemeberroutes){
                                         int size = markersList.size();
                                         for(int n = 0;n<size;++n){
@@ -2776,19 +2904,13 @@ public class MapsActivity extends AppCompatActivity
                                                 Log.i("err","origin == null");
                                             }
                                             else{
-                                                navilib(origin[0],customize_end[0],false,"all",n+1);
+                                                navilib(origin[0],customize_end[0],false,"all",n);
                                             }
                                         }
 
                                     }
-                                    if(isnavi_srchshop){
-                                        finplacetype = null;//reset finplacetype
-                                        placetype.clear();//reset placetype
-                                        getPlaceTypeSelected("nv",customize_start[0],customize_end[0]);
-                                    }
-                                    else{
-                                        navilib(customize_start[0],customize_end[0],false,mode,0);
-                                    }
+
+
                                 }
                             }
                         })
@@ -3058,22 +3180,24 @@ public class MapsActivity extends AppCompatActivity
                             }
                             break;
                         case "all":
-                            try{
-                            navipolyline.add(num,mMap.addPolyline(DirectionConverter.createPolyline(MapsActivity.this, directionPositionList, 5,
-                                    Color.parseColor(polylinecolor[num % 11]))));
-                            tmpline = navipolyline.get(num).getPoints();
-                            tmps = PolyUtil.encode(tmpline);
-                            str_navipolyline.add(num,tmps);
-                                if(isManager){
+                            try {
+                                navipolyline.add(mMap.addPolyline(DirectionConverter.createPolyline(MapsActivity.this, directionPositionList, 5,
+                                        Color.parseColor(polylinecolor[num % 11]))));
+                                tmpline = navipolyline.get(num).getPoints();
+                                tmps = PolyUtil.encode(tmpline);
+                                Log.i("numnavi", String.valueOf(num));
+                                str_navipolyline.add(num, tmps);
+                                if (isManager) {
                                     ManagerPolylineReference.child(String.valueOf(num)).setValue(tmps);
                                 }
                             }
-                            catch(Exception e){
-                                Log.i("indexerr","");
+                            catch (Exception e) {
+                                Log.i("indexerr", "");
                             }
+
                             break;
                         case "customize":
-                            navipolyline.add(0, mMap.addPolyline(DirectionConverter.createPolyline(MapsActivity.this, directionPositionList, 5, Color.RED)));
+                            navipolyline.add(mMap.addPolyline(DirectionConverter.createPolyline(MapsActivity.this, directionPositionList, 5, Color.RED)));
                             tmpline = navipolyline.get(0).getPoints();
                             tmps =PolyUtil.encode(tmpline);
                             str_navipolyline.add(0,tmps);
@@ -3126,37 +3250,53 @@ public class MapsActivity extends AppCompatActivity
     }
 
     private void set_polyline() {
-        ChildEventListener ManagerPolylineEventListener = new ChildEventListener() {
-            @Override
-            public void onChildAdded(DataSnapshot dataSnapshot, String s) {
-                String key = dataSnapshot.getKey();
-                String line = (String) dataSnapshot.getValue();
-                List<LatLng> polyline = PolyUtil.decode(line);
-                //mMap.addPolyline(new PolylineOptions().addAll(polyline));
+        if(isfollowmode) {
+            ChildEventListener ManagerPolylineEventListener = new ChildEventListener() {
+                @Override
+                public void onChildAdded(DataSnapshot dataSnapshot, String s) {
+                        String key = dataSnapshot.getKey();
+                        String line = (String) dataSnapshot.getValue();
+                        int index = Integer.parseInt(key);
+                        List<LatLng> polyline = null;
+                        if (line != null) {
+                            try {
+                                polyline = PolyUtil.decode(line);
+                                str_navipolyline.add(line);
+                                navipolyline.add(mMap.addPolyline(new PolylineOptions().addAll(polyline).width(5).color(Color.parseColor(polylinecolor[index % 11]))));
+                            } catch (Exception e) {
+                                Log.i("index_err", String.valueOf(index));
+                            }
+                        }
+                }
+
+                @Override
+                public void onChildChanged(DataSnapshot dataSnapshot, String previousChildName) {
+
+                }
+
+                @Override
+                public void onChildRemoved(DataSnapshot dataSnapshot) {
+                        del_polyline();
+                }
+
+                @Override
+                public void onChildMoved(DataSnapshot dataSnapshot, String s) {
+
+                }
+
+                @Override
+                public void onCancelled(DatabaseError databaseError) {
+
+                }
+            };
+            ManagerPolylineReference.addChildEventListener(ManagerPolylineEventListener);
+            mManagerPolylineChildEventListener = ManagerPolylineEventListener;
+        }
+        else{
+            if( mManagerPolylineChildEventListener != null) {
+                ManagerPolylineReference.removeEventListener(mManagerPolylineChildEventListener);
             }
-
-            @Override
-            public void onChildChanged(DataSnapshot dataSnapshot, String previousChildName) {
-
-            }
-
-            @Override
-            public void onChildRemoved(DataSnapshot dataSnapshot) {
-
-            }
-
-            @Override
-            public void onChildMoved(DataSnapshot dataSnapshot, String s) {
-
-            }
-
-            @Override
-            public void onCancelled(DatabaseError databaseError) {
-
-            }
-        };
-        ManagerPolylineReference.addChildEventListener(ManagerPolylineEventListener);
-        mManagerPolylineChildEventListener = ManagerPolylineEventListener;
+        }
     }
 
     private void reloaddata(){
@@ -3199,9 +3339,10 @@ public class MapsActivity extends AppCompatActivity
             List<LatLng> polyline;
             for(int i = 0 ; i <temp3.size();i++ ){
                 try{
-                   str_navipolyline.add(i,temp3.get(i));
+                   str_navipolyline.add(temp3.get(i));
                    polyline = PolyUtil.decode(str_navipolyline.get(i));
-                   navipolyline.add(i,mMap.addPolyline(new PolylineOptions().addAll(polyline).width(5).color(Color.parseColor(polylinecolor[i % 11]))));
+                   navipolyline.add(mMap.addPolyline(new PolylineOptions().addAll(polyline).width(15).color(Color.parseColor(polylinecolor[i % 11]))));
+
                 }
                 catch (Exception e){
                     Log.i("err:",String.valueOf(i));
