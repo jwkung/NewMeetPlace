@@ -56,7 +56,6 @@ public class MainActivity extends AppCompatActivity
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         //儲存USER資料
         tinydb = new TinyDB(this);
-        MyUser myUser= (MyUser) tinydb.getObject("MyUser", MyUser.class);
         //顯示右上角的選單
         setSupportActionBar(toolbar);
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
@@ -87,10 +86,13 @@ public class MainActivity extends AppCompatActivity
         navigationView.setNavigationItemSelectedListener(this);
         //左選單內顯示帳號
         View header = navigationView.getHeaderView(0);
+
+        MyUser myUser= (MyUser) tinydb.getObject("MyUser", MyUser.class);
         accountView = (TextView) header.findViewById(R.id.accountView);
         accountView.setText(myUser.getAccount().toString());
         nicknameView = (TextView) header.findViewById(R.id.nickname_view);
         nicknameView.setText(myUser.getTruenickname().toString());
+
         mFragmentMgr.beginTransaction().replace(R.id.container, fragment03, "fragment01").commit();
         mAdapter = new ArrayAdapter<String>(this,R.layout.friend_check_item,R.id.textfriend);
     }
