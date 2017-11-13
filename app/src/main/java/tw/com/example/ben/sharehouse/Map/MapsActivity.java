@@ -219,6 +219,7 @@ public class MapsActivity extends AppCompatActivity
     private TinyDB tinydbb;
     EditText edt;
     private boolean loadbit = true;
+    private boolean quickfinplaceflag = false;
 
 
     // TODO: OnCreate
@@ -346,6 +347,7 @@ public class MapsActivity extends AppCompatActivity
             set_usersetting();//使用者設定-是否開啟同步位置
             set_manageflag();
             set_finalplace();
+
 
             fabtest = (FloatingActionButton) findViewById( R.id.fab);
             fabtest.setOnClickListener(new View.OnClickListener() {
@@ -1318,6 +1320,19 @@ public class MapsActivity extends AppCompatActivity
                         del_navimkr();
                         DL.closeDrawer(GravityCompat.START);
                         break;
+                    case R.id.quick_to_finplace:
+                        MenuItem finitem = NV.getMenu().findItem(R.id.quick_to_finplace);
+                        if(!quickfinplaceflag){
+                            setfabvisible(true);
+                            quickfinplaceflag = true;
+                            finitem.setTitle(R.string.close_quick_to_finplace);
+                        }
+                        else{
+                            setfabvisible(false);
+                            quickfinplaceflag = false;
+                            finitem.setTitle(R.string.quick_to_finplace);
+                        }
+                        DL.closeDrawer(GravityCompat.START);
                     case R.id.navItemAbout:
                            /* Intent intent2 = new Intent();
                             intent2.setClass(Navigation_BaseActivity.this, About.class);
@@ -2377,13 +2392,13 @@ public class MapsActivity extends AppCompatActivity
                     Menu menu = NV.getMenu();
                     MenuItem item = menu.findItem(R.id.followmode);
                     item.setVisible(false);
+                    setfabvisible(false);
                 }
                 else {
                     if( getEmail().equals(m.manager_email)) {
-                        setfabvisible(true);
                         isManager = true;
                         ManagerFlagReference.setValue("false");
-                        Toast.makeText(getApplicationContext(),"Manger", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(getApplicationContext(),"房主", Toast.LENGTH_SHORT).show();
                         Menu menu = NV.getMenu();
                         MenuItem item = menu.findItem(R.id.followmode);
                         item.setVisible(false);
@@ -2391,9 +2406,12 @@ public class MapsActivity extends AppCompatActivity
                     }
                     else{
                         isManager = false;
-                        setfabvisible(false);
-                        Toast.makeText(getApplicationContext(),"Not Manger", Toast.LENGTH_SHORT).show();
+                        Menu menu = NV.getMenu();
+                        MenuItem item = menu.findItem(R.id.quick_to_finplace);
+                        item.setVisible(false);
+                        //Toast.makeText(getApplicationContext(),"Not Manger", Toast.LENGTH_SHORT).show();
                     }
+                    setfabvisible(false);
                 }
 
             }

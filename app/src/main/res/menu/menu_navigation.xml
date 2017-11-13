@@ -22,6 +22,10 @@
             android:icon="@drawable/cookie"
             android:title="@string/followmode" />
         <item
+            android:id="@+id/quick_to_finplace"
+            android:icon="@drawable/cookie"
+            android:title="@string/quick_to_finplace" />
+        <item
             android:id="@+id/navItemAbout"
             android:icon="@drawable/cookie"
             android:title="@string/about" />

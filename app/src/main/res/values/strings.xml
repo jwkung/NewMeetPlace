@@ -86,6 +86,8 @@
     <string name="clean_naviroute">清除路線</string>
     <string name="clean_navinearstore">清除沿途商家</string>
     <string name="maps_add_friend">聊天室新增成員</string>
+    <string name="quick_to_finplace">開啟最終地點快捷鍵</string>
+    <string name="close_quick_to_finplace">關閉最終地點快捷鍵</string>
 
 
 
