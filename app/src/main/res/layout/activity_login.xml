@@ -84,22 +84,30 @@
 
                     <Button
                         android:id="@+id/email_sign_in_button"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
+                        android:layout_width="200dp"
+                        android:layout_height="50dp"
                         android:layout_gravity="center_horizontal"
                         android:layout_marginTop="16dp"
                         android:onClick="login"
                         android:text="登入"
+                        android:textAlignment="center"
+                        android:textColor="#FFFFFF"
+                        android:textSize="18sp"
+                        android:background="@drawable/buttonshape"
+                        android:shadowColor="#2B2818"
+                        android:shadowDx="2"
+                        android:shadowDy="0"
+                        android:shadowRadius="5"
                         android:textStyle="bold" />
 
                     <Button
                         android:id="@+id/google_sign_in_button"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
+                        android:layout_width="200dp"
+                        android:layout_height="50dp"
                         android:layout_gravity="center_horizontal"
                         android:layout_marginTop="16dp"
-                        android:onClick="login_g"
-                        android:text="Google" />
+                        android:background="@drawable/signingoogle"
+                        android:onClick="login_g" />
 
                 </LinearLayout>
             </ScrollView>

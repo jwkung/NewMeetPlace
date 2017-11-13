@@ -155,57 +155,59 @@ public class LoginActivity extends AppCompatActivity implements GoogleApiClient.
                 .getText().toString();
         Log.d("AUTH_LOGIN: ", email+"/"+password);
         //登錄 查看狀態 並跳轉頁面
-        auth.signInWithEmailAndPassword(email, password)
-                .addOnCompleteListener(new OnCompleteListener<AuthResult>() {
-                    @Override
-                    public void onComplete(@NonNull Task<AuthResult> task) {
-                        Log.d("onComplete", "onComplete");
-                        //登入失敗
-                        if (!task.isSuccessful()){
+        try {
+            auth.signInWithEmailAndPassword(email, password)
+                    .addOnCompleteListener(new OnCompleteListener<AuthResult>() {
+                        @Override
+                        public void onComplete(@NonNull Task<AuthResult> task) {
+                            Log.d("onComplete", "onComplete");
+                            //登入失敗
+                            if (!task.isSuccessful()) {
 
-                            Log.d("onComplete", "登入失敗");
-                            Query mRef = mFirebaseRef.orderByChild("account").equalTo(email);
-                            mRef.addListenerForSingleValueEvent(new ValueEventListener() {
-                                @Override
-                                public void onDataChange(DataSnapshot dataSnapshot) {
-                                    if (dataSnapshot.exists()){
-                                        new AlertDialog.Builder(LoginActivity.this)
-                                                .setTitle("登入問題")
-                                                .setMessage("密碼錯誤")
-                                                .setPositiveButton("確定", null)
-                                                .show();
+                                Log.d("onComplete", "登入失敗");
+                                Query mRef = mFirebaseRef.orderByChild("account").equalTo(email);
+                                mRef.addListenerForSingleValueEvent(new ValueEventListener() {
+                                    @Override
+                                    public void onDataChange(DataSnapshot dataSnapshot) {
+                                        if (dataSnapshot.exists()) {
+                                            new AlertDialog.Builder(LoginActivity.this)
+                                                    .setTitle("登入問題")
+                                                    .setMessage("密碼錯誤")
+                                                    .setPositiveButton("確定", null)
+                                                    .show();
+                                        } else {
+                                            new AlertDialog.Builder(LoginActivity.this)
+                                                    .setTitle("登入問題")
+                                                    .setMessage("無此帳號，是否要以此帳號與密碼註冊?")
+                                                    .setPositiveButton("註冊", new DialogInterface.OnClickListener() {
+                                                        @Override
+                                                        public void onClick(DialogInterface dialog, int which) {
+                                                            createUser(email, password);
+                                                        }
+                                                    })
+                                                    .setNeutralButton("取消", null)
+                                                    .show();
+                                        }
                                     }
-                                    else{
-                                        new AlertDialog.Builder(LoginActivity.this)
-                                                .setTitle("登入問題")
-                                                .setMessage("無此帳號，是否要以此帳號與密碼註冊?")
-                                                .setPositiveButton("註冊", new DialogInterface.OnClickListener() {
-                                                    @Override
-                                                    public void onClick(DialogInterface dialog, int which) {
-                                                        createUser(email, password);
-                                                    }
-                                                })
-                                                .setNeutralButton("取消", null)
-                                                .show();
+
+                                    @Override
+                                    public void onCancelled(FirebaseError firebaseError) {
                                     }
-                                }
-                                @Override
-                                public void onCancelled(FirebaseError firebaseError) {
-                                }
-                            });
+                                });
+                            } else {
+                                //帳號預設為信箱
+                                account = email;
+                                addContact();
+                                //登陸成功
+                                //startActivity(mainActivity);
+                                //登陸畫面結束
+                                //finish();
+                            }
                         }
-                        else
-                        {
-                            //帳號預設為信箱
-                            account = email;
-                            addContact();
-                            //登陸成功
-                            //startActivity(mainActivity);
-                            //登陸畫面結束
-                            //finish();
-                        }
-                    }
-                });
+                    });
+        }catch(Exception e){
+            Toast.makeText(this,"帳號或密碼不可為空!",Toast.LENGTH_SHORT ).show();
+        }
 
     }
     //創建使用者
