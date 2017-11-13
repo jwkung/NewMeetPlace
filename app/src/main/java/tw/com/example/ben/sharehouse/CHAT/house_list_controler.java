@@ -71,7 +71,9 @@ public class house_list_controler extends Fragment {
                     public void onChildAdded(DataSnapshot dataSnapshot, String s) {
                         if (dataSnapshot.exists()){
                             GV.setChatName(dataSnapshot.child("name").getValue().toString());
+                            GV.setHouse_Now(dataSnapshot.getRef().toString());
                             Log.e("Chat","ChatNameFind"+GV.getChatName());
+                            Log.e("Chat", "HouseNow " + GV.getHouse_Now());
                         }
                     }
                     @Override
