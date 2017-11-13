@@ -44,32 +44,52 @@ public class house_list_adapter extends BaseAdapter{
         mListener = this.mRef.addChildEventListener(new ChildEventListener() {
             @Override
             public void onChildAdded(DataSnapshot dataSnapshot, String previousChildName) {
-
+                Log.v("house_list","childAdded");
                 House model = dataSnapshot.getValue(House.class);
                 String key = dataSnapshot.getKey();
 
                 // Insert into the correct location, based on previousChildName
-                if (previousChildName == null) {
-                    mModels.add(0, model);
-                    mKeys.add(0, key);
-                } else {
-                    int previousIndex = mKeys.indexOf(previousChildName);
-                    int nextIndex = previousIndex + 1;
-                    if (nextIndex == mModels.size()) {
-                        mModels.add(model);
-                        mKeys.add(key);
+                if(dataSnapshot.exists()){
+                    if (previousChildName == null) {
+                        mModels.add(0, model);
+                        mKeys.add(0, key);
                     } else {
-                        mModels.add(nextIndex, model);
-                        mKeys.add(nextIndex, key);
+                        int previousIndex = mKeys.indexOf(previousChildName);
+                        int nextIndex = previousIndex + 1;
+                        if (nextIndex == mModels.size()) {
+                            mModels.add(model);
+                            mKeys.add(key);
+                        } else {
+                            mModels.add(nextIndex, model);
+                            mKeys.add(nextIndex, key);
+                        }
                     }
-                }
 
-                notifyDataSetChanged();
+                    notifyDataSetChanged();
+                }
+                /*
+                   if (previousChildName == null) {
+                        mModels.add(0, model);
+                        mKeys.add(0, key);
+                    } else {
+                        int previousIndex = mKeys.indexOf(previousChildName);
+                        int nextIndex = previousIndex + 1;
+                        if (nextIndex == mModels.size()) {
+                            mModels.add(model);
+                            mKeys.add(key);
+                        } else {
+                            mModels.add(nextIndex, model);
+                            mKeys.add(nextIndex, key);
+                        }
+                    }
+
+                    notifyDataSetChanged();*/
             }
 
 
             @Override
             public void onChildChanged(DataSnapshot dataSnapshot, String s) {
+                Log.v("house_list","childChanged");
                 // One of the mModels changed. Replace it in our list and name mapping
                 String key = dataSnapshot.getKey();
                 House newModel = dataSnapshot.getValue(House.class);
@@ -82,7 +102,7 @@ public class house_list_adapter extends BaseAdapter{
 
             @Override
             public void onChildRemoved(DataSnapshot dataSnapshot) {
-
+                Log.v("house_list","childReMoved");
                 // A model was removed from the list. Remove it from our list and the name mapping
                 String key = dataSnapshot.getKey();
                 int index = mKeys.indexOf(key);
@@ -95,7 +115,7 @@ public class house_list_adapter extends BaseAdapter{
 
             @Override
             public void onChildMoved(DataSnapshot dataSnapshot, String previousChildName) {
-
+                Log.v("house_list","childMoved");
                 // A model changed position in the list. Update our list accordingly
                 String key = dataSnapshot.getKey();
                 House newModel = dataSnapshot.getValue(House.class);
@@ -144,9 +164,12 @@ public class house_list_adapter extends BaseAdapter{
     @Override
     public View getView(int i, View view, ViewGroup viewGroup){
         House model = mModels.get(i);
-        if(view== null) {
+        /*if(view== null) {
             view = LayoutInflater.from(context).inflate(R.layout.contact_list_item, null, false);
-        }
+        }else{
+            view = LayoutInflater.from(context).inflate(R.layout.contact_list_item, null, false);
+        }*/
+        view = LayoutInflater.from(context).inflate(R.layout.contact_list_item, null, false);
         populateView(view, model);
         return view;
     }
