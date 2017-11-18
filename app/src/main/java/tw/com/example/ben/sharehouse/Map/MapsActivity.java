@@ -1,5 +1,6 @@
 package tw.com.example.ben.sharehouse.Map;
 
+import android.annotation.SuppressLint;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -220,6 +221,7 @@ public class MapsActivity extends AppCompatActivity
     EditText edt;
     private boolean loadbit = true;
     private boolean quickfinplaceflag = false;
+    private int  tasknum;
 
 
     // TODO: OnCreate
@@ -341,14 +343,6 @@ public class MapsActivity extends AppCompatActivity
             mFirebaseStorage = FirebaseStorage.getInstance();
             mChatPhotosStorageReferenece = mFirebaseStorage.getReference().child("chat_photos");
             FinalPlaceReference= MapDatabase.getReference().child(Chatroom_Key).child("FinalPlace");
-            check_manager();//檢查誰是管理員
-            set_map_member_loc();//使用者位置標記監聽實作
-            set_map_customize_mkr();//使用者自訂標記監聽實作
-            set_usersetting();//使用者設定-是否開啟同步位置
-            set_manageflag();
-            set_finalplace();
-
-
             fabtest = (FloatingActionButton) findViewById( R.id.fab);
             fabtest.setOnClickListener(new View.OnClickListener() {
                 @Override
@@ -576,6 +570,12 @@ public class MapsActivity extends AppCompatActivity
             }
 
         });
+        check_manager();//檢查誰是管理員
+        set_map_member_loc();//使用者位置標記監聽實作
+        set_map_customize_mkr();//使用者自訂標記監聽實作
+        set_usersetting();//使用者設定-是否開啟同步位置
+        set_manageflag();
+        set_finalplace();
 
         // Turn on the My Location layer and the related control on the map.
         updateLocationUI();
@@ -1306,8 +1306,8 @@ public class MapsActivity extends AppCompatActivity
                         DL.closeDrawer(GravityCompat.START);
                         break;
                     case R.id.navi_all:
-                        setnavi("all");
                         DL.closeDrawer(GravityCompat.START);
+                        setnavi("all");
                         break;
                     case R.id.navi_customize:
                         setnavi("customize");
@@ -2249,8 +2249,7 @@ public class MapsActivity extends AppCompatActivity
                             }
                             del_navimkr();
                             setchatmembermenu();
-                            if(!isnavi_showallmemeberroutes)
-                                navilib(start,end,true,"customize",0);
+                            navilib(start,end,true,"customize",1);
                         }
                     }
 
@@ -2329,6 +2328,10 @@ public class MapsActivity extends AppCompatActivity
                 naviMarkers.get(i).remove();
         }
         naviMarkers = new ArrayList<Marker>();
+        if(isManager)
+        {
+            NaviMarkerReference.removeValue();
+        }
     }
 
     private void  del_polyline(){
@@ -2865,21 +2868,20 @@ public class MapsActivity extends AppCompatActivity
                     return;
                 }
                 del_polyline();
-                for(int n = 0;n<size;n++){
+                tasknum = 0;
+                for(int n = 0;n<size;n++) {
                     Marker mkr;
                     mkr = markersList.get(n);
                     LatLng ori = mkr.getPosition();
-                    if (ori == null){
-                        Log.i("err","origin == null");
+                    if (ori == null) {
+                        Log.i("err", "origin == null");
+                    } else {
+                        Log.i("test", String.valueOf(n));
+                        navilib(ori, finalplacemkr.getPosition(), false, "all", n);
                     }
-                    else{
-                        Log.i("err",String.valueOf(n));
-                        navilib(ori,finalplacemkr.getPosition(),false,mode,n);
-                    }
+                    //sleep(200);
                 }
-
-
-                break;
+               break;
 
             case "customize":
                 final View item = LayoutInflater.from(MapsActivity.this).inflate(R.layout.navi_customize, null);
@@ -2928,6 +2930,7 @@ public class MapsActivity extends AppCompatActivity
                                             else{
                                                 navilib(origin[0],customize_end[0],false,"all",n);
                                             }
+                                            sleep(100);
                                         }
 
                                     }
@@ -3146,6 +3149,7 @@ public class MapsActivity extends AppCompatActivity
                 if(fp!=null){
                     LatLng l = new LatLng(Double.parseDouble(fp.lat),Double.parseDouble(fp.lon));
                     finalplacemkr.setPosition(l);
+                    finalplacemkr.setTitle(fp.title);
                     Log.i("change","");
                 }
 
@@ -3171,9 +3175,10 @@ public class MapsActivity extends AppCompatActivity
 
     }
 
-    private void navilib(LatLng ori, LatLng dest, final Boolean searchplace,final String mode,final int num){
-        String key = "AIzaSyDa5rahbohkWotgck3IDv6votMlBeMWzS8";
-        GoogleDirection.withServerKey(key)
+    private void navilib(final LatLng ori, final LatLng dest, final Boolean searchplace,final String mode,final int num){
+
+            String key = "AIzaSyDa5rahbohkWotgck3IDv6votMlBeMWzS8";
+            GoogleDirection.withServerKey(key)
                 .from(ori)
                 .to(dest)
                 .execute(new DirectionCallback(){
@@ -3200,33 +3205,57 @@ public class MapsActivity extends AppCompatActivity
                             if(isManager){
                                 ManagerPolylineReference.child(String.valueOf(num)).setValue(tmps);
                             }
+                            if(navipolyline.size() > 0 && num == markersList.size()-1){
+                                ArrayList<String> s = (ArrayList<String>) str_navipolyline;
+                                tinydbb.remove(Chatroom_Key+"Polyline");
+                                tinydbb.putListString(Chatroom_Key+"Polyline", s);
+                                Log.i("save","polylinesave");
+                            }
                             break;
                         case "all":
                             try {
                                 navipolyline.add(mMap.addPolyline(DirectionConverter.createPolyline(MapsActivity.this, directionPositionList, 5,
                                         Color.parseColor(polylinecolor[num % 11]))));
-                                tmpline = navipolyline.get(num).getPoints();
-                                tmps = PolyUtil.encode(tmpline);
                                 Log.i("numnavi", String.valueOf(num));
-                                str_navipolyline.add(num, tmps);
-                                if (isManager) {
-                                    ManagerPolylineReference.child(String.valueOf(num)).setValue(tmps);
-                                }
+                                tasknum++;
                             }
                             catch (Exception e) {
                                 Log.i("indexerr", "");
                             }
+                            if(navipolyline.size() > 0 && tasknum == markersList.size() ){
+                                ArrayList<String> s = (ArrayList<String>) str_navipolyline;
+                                tinydbb.remove(Chatroom_Key+"Polyline");
+                                Log.i("all_save","polylinesave");
+                                for(int i = 0;i<navipolyline.size();i++) {
+                                    tmpline = navipolyline.get(i).getPoints();
+                                    tmps = PolyUtil.encode(tmpline);
+                                    str_navipolyline.add(i, tmps);
+                                    if (isManager) {
+                                        ManagerPolylineReference.child(String.valueOf(i)).setValue(tmps);
+                                    }
+                                }
+                                tinydbb.putListString(Chatroom_Key+"Polyline", s);
+                            }
 
                             break;
                         case "customize":
-                            navipolyline.add(mMap.addPolyline(DirectionConverter.createPolyline(MapsActivity.this, directionPositionList, 5, Color.RED)));
-                            tmpline = navipolyline.get(0).getPoints();
-                            tmps =PolyUtil.encode(tmpline);
-                            str_navipolyline.add(0,tmps);
-                            if(isManager){
-                                ManagerPolylineReference.child(String.valueOf(num)).setValue(tmps);
-                            }
-                            break;
+                                if(num !=1) {
+                                    navipolyline.add(mMap.addPolyline(DirectionConverter.createPolyline(MapsActivity.this, directionPositionList, 5, Color.RED)));
+                                    tmpline = navipolyline.get(0).getPoints();
+                                    tmps = PolyUtil.encode(tmpline);
+                                    str_navipolyline.add(0, tmps);
+                                    if (isManager) {
+                                        ManagerPolylineReference.child(String.valueOf(num)).setValue(tmps);
+                                    }
+                                    if (navipolyline.size() > 0) {
+                                        ArrayList<String> s = (ArrayList<String>) str_navipolyline;
+                                        tinydbb.remove(Chatroom_Key + "Polyline");
+                                        tinydbb.putListString(Chatroom_Key + "Polyline", s);
+                                        Log.i("save", "polylinesave");
+                                    }
+                                }
+                                break;
+
                     }
                     if(routedis <= 5.0 && searchplace) {
                         navimarkernum = 0;
@@ -3251,12 +3280,7 @@ public class MapsActivity extends AppCompatActivity
                             }
                         }
                     }
-                    if(navipolyline.size() > 0){
-                        ArrayList<String> s = (ArrayList<String>) str_navipolyline;
-                        tinydbb.remove(Chatroom_Key+"Polyline");
-                        tinydbb.putListString(Chatroom_Key+"Polyline", s);
-                        Log.i("save","polylinesave");
-                    }
+
                     /*naviMarkers[p] = mMap.addMarker(naviplaces[p]);
                         naviMarkers[p].setIcon(BitmapDescriptorFactory.defaultMarker(50));
                         naviMarkers[p].setTag("naviplace");*/
