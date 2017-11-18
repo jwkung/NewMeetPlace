@@ -1,6 +1,5 @@
 package tw.com.example.ben.sharehouse.Map;
 
-import android.annotation.SuppressLint;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -839,7 +838,7 @@ public class MapsActivity extends AppCompatActivity
         if(currentUser!=null){
             String userId = getUid();
             String useremail = getEmail();
-            User user = new User(useremail,Double.toString(L.getLatitude()),Double.toString(L.getLongitude()) );
+            User user = new User(useremail,Double.toString(L.getLatitude()),Double.toString(L.getLongitude()),mUsername);
             mLocReference.child(userId).setValue(user);
         }
     }
@@ -1396,7 +1395,7 @@ public class MapsActivity extends AppCompatActivity
                 super .onDrawerOpened(drawerView);
                 TextView Txv =(TextView)findViewById(R.id.navigation_header_userID);
                 TextView Txv2 =(TextView)findViewById(R.id.nv_contact_name);
-                String e = getEmail();
+                String e = mUsername;
                 Txv.setText(e);
                 setchatmembermenu();
                 try {
@@ -2042,11 +2041,11 @@ public class MapsActivity extends AppCompatActivity
                     LatLng latLng = new LatLng(Double.parseDouble(user.Lat), Double.parseDouble(user.Lon));
                     //Log.i("Lat",user.Lat);
                     Marker marker=mMap.addMarker(new MarkerOptions().position(latLng)
-                            .title(user.email)
+                            .title(user.nickname)
                             .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_MAGENTA)));
                     marker.setTag(userKey);
                     markersList.add(marker);
-                    chatmember.add(user.email);
+                    chatmember.add(user.nickname);
                 }
             }
 
