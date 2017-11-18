@@ -50,6 +50,7 @@ public class House {
     public String getMessage() {
         return message;
     }
+    public void setUrl(String houseurl){ this.url = houseurl; }
     public String getName(){return name;}
     public String getThisUrl(){return thisUrl;}
     public String getRoomTable() {return roomTable;}

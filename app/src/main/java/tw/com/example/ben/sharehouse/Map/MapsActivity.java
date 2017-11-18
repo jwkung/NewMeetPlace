@@ -1214,7 +1214,7 @@ public class MapsActivity extends AppCompatActivity
                                                                 }else{
                                                                     Toast.makeText( getApplicationContext() ,"朋友"+edt.getText().toString()+"加入聊天室", Toast.LENGTH_SHORT).show();
                                                                     Firebase MapAddFriend = new Firebase(user.getHouseTable());
-                                                                    House house2 = new House(GV.getHouse_Now().toString());
+                                                                    House house2 = (House) tinydbb.getObject("HouseNow",House.class);
                                                                     MapAddFriend.push().setValue(house2);
                                                                 }
                                                             }

@@ -72,8 +72,9 @@ public class house_list_controler extends Fragment {
                         if (dataSnapshot.exists()){
                             GV.setChatName(dataSnapshot.child("name").getValue().toString());
                             GV.setHouse_Now(dataSnapshot.getRef().toString());
-                            Log.e("Chat","ChatNameFind"+GV.getChatName());
-                            Log.e("Chat", "HouseNow " + GV.getHouse_Now());
+                            House house = dataSnapshot.getValue(House.class);
+                            house.setUrl(GV.getHouse_Now());
+                            tinydb.putObject("HouseNow",house);
                         }
                     }
                     @Override
