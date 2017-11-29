@@ -21,7 +21,6 @@ import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
-import android.text.TextUtils;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -613,7 +612,23 @@ public class MapsActivity extends AppCompatActivity
     //資訊視窗長按事件
     @Override
     public void onInfoWindowLongClick(final Marker marker) {
-        if(isfollowmode)//追隨模式中不可使用相關功能
+        Calendar c = Calendar.getInstance();
+        int hour = c.get(Calendar.HOUR_OF_DAY);
+        int minute = c.get(Calendar.MINUTE);
+        String time;
+        if ( minute < 10 ){
+            time = hour +":0"+minute;
+        }
+        else{
+            time = hour +":"+minute;
+        }
+        //sendMessage();
+        // TODO: Send messages on click
+        Chat friendlyMessage = new Chat("標記於:"+marker.getTitle().toString(), mUsername, null,time);
+        // Clear input box
+        mFirebaseRef.push().setValue(friendlyMessage);
+        mMessageEditText.setText("");
+        /*if(isfollowmode)//追隨模式中不可使用相關功能
             return;
         //判斷該標記是不是自訂標記，不是的話不做任何動作
         int size=UmarkerList.size();
@@ -722,7 +737,7 @@ public class MapsActivity extends AppCompatActivity
                     public void onClick(DialogInterface dialog, int which) {
                     }
                 })
-                .show();
+                .show();*/
     }
 
     /**
