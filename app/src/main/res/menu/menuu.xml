@@ -17,18 +17,18 @@
         android:enabled="true"
         android:icon="@drawable/search1"
         android:title="search_place"
-        app:showAsAction="ifRoom" />
+        app:showAsAction="always" />
     <item
         android:id="@+id/addusermkr"
         android:enabled="true"
         android:icon="@drawable/placeholder"
         android:title="addusermkr"
-        app:showAsAction="ifRoom" />
+        app:showAsAction="always" />
     <item
         android:id="@+id/btn_rnvdrawer"
         android:enabled="true"
         android:icon="@drawable/more"
         android:title="btn_rnvdrawer"
-        app:showAsAction="ifRoom" />
+        app:showAsAction="always" />
 
 </menu>

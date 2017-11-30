@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.DataSetObserver;
 import android.graphics.Color;
+import android.graphics.drawable.Drawable;
 import android.location.Location;
 import android.net.Uri;
 import android.os.AsyncTask;
@@ -16,11 +17,13 @@ import android.support.design.widget.NavigationView;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.view.GravityCompat;
+import android.support.v4.view.MenuItemCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -62,6 +65,7 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
@@ -168,7 +172,6 @@ public class MapsActivity extends AppCompatActivity
     private int NVrmenupage;
     private static final int RC_PHOTO_PICKER = 2 ;
     private int[] TollBarTitle = {R.string.app_name,R.string.RealtimeLoc_Switch,R.string.about};
-    public String lastkey,lastemail;
     public String Chatroom_Key;
     private String mUsername;
     private String finplacetype;
@@ -220,6 +223,8 @@ public class MapsActivity extends AppCompatActivity
     private boolean loadbit = true;
     private boolean quickfinplaceflag = false;
     private int  tasknum;
+    private List<String> usermkrkey;
+    private View placeholder;
 
 
     // TODO: OnCreate
@@ -288,39 +293,7 @@ public class MapsActivity extends AppCompatActivity
             mUMkrReference = MapDatabase.getReference().child(Chatroom_Key).child("Umarker");
             UmarkerList = new ArrayList<>();
             UMkrNumLimit = 1;
-
-            FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.btn_rightdrawer);
-            FloatingActionButton fab_addusrmkr = (FloatingActionButton) findViewById(R.id.addusermkr);
-            fab.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    DL.openDrawer(GravityCompat.END);
-                }
-
-            });
-            fab_addusrmkr.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    if (UMkrNumLimit > 0) {
-                        // [START_EXCLUDE]
-                        final double[] CameraLat = new double[1];
-                        final double[] CameraLon = new double[1];
-                        mMap.setOnMapLoadedCallback(new GoogleMap.OnMapLoadedCallback() {
-                            @Override
-                            public void onMapLoaded() {
-                                CameraLat[0] = mMap.getCameraPosition().target.latitude;
-                                CameraLon[0] = mMap.getCameraPosition().target.longitude;
-                                submitUmkrlocation(Double.toString(CameraLat[0]), Double.toString(CameraLon[0]));
-                            }
-                        });
-
-                    }
-                    else{
-                        Toast.makeText(MapsActivity.this, "標記已達上限，無法再增加!", Toast.LENGTH_LONG).show();
-                    }
-                }
-
-            });
+            usermkrkey = new ArrayList<>();
             setUpToolBar();//上方工具列功能實作
             locreqflag = 1;//同步自身位置旗標
             //附近位置儲存陣列及初始搜索半徑
@@ -628,116 +601,6 @@ public class MapsActivity extends AppCompatActivity
         // Clear input box
         mFirebaseRef.push().setValue(friendlyMessage);
         mMessageEditText.setText("");
-        /*if(isfollowmode)//追隨模式中不可使用相關功能
-            return;
-        //判斷該標記是不是自訂標記，不是的話不做任何動作
-        int size=UmarkerList.size();
-        int flag=0;
-        for(int m=0 ; m < size; ++m) {
-            Marker mkr;
-            mkr = UmarkerList.get(m);
-            String tag = (String) mkr.getTag();
-            String tagg = (String) marker.getTag();
-            if(tag!=null &&tagg!=null)
-                if (tag.equals(tagg)) {
-                    flag=1;
-                }
-        }
-        if(flag == 0){
-            return ;
-        }
-        //自訂標記的相關功能-修改刪除
-        String t = marker.getTitle();
-        final LatLng L = marker.getPosition();
-        final View item = LayoutInflater.from(MapsActivity.this).inflate(R.layout.modify_mkrtitle, null);
-        new AlertDialog.Builder(MapsActivity.this,R.style.MyDialogTheme)
-                .setTitle(t)
-                .setCancelable(true)
-                .setMessage(R.string.Latitude + L.latitude + "\n" + R.string.Longtitude + L.longitude)
-                .setPositiveButton(R.string.Change_Title, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        new AlertDialog.Builder(MapsActivity.this,R.style.MyDialogTheme)
-                                .setTitle("修改自訂標記名稱")
-                                .setView(item)
-                                .setCancelable(true)
-                                .setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
-                                    @Override
-                                    public void onClick(DialogInterface dialog, int which) {
-                                        EditText e = (EditText) item.findViewById(R.id.edit_text);
-                                        String s = e.getText().toString();
-                                        if (TextUtils.isEmpty(s)) {
-                                            e.setError("Name can not be empty");
-                                        } else {
-                                            marker.setTitle(e.getText().toString());
-                                            final LatLng L = marker.getPosition();
-                                            final String key = (String) marker.getTag();
-                                            ValueEventListener postListener = new ValueEventListener() {
-                                                @Override
-                                                public void onDataChange(DataSnapshot dataSnapshot) {
-                                                    UserMkr usermkr = dataSnapshot.getValue(UserMkr.class);
-                                                    UserMkr umkr ;
-                                                    if (usermkr != null) {
-                                                        umkr = new UserMkr(Double.toString(L.latitude), Double.toString(L.longitude), marker.getTitle(), usermkr.Email);
-                                                        mUMkrReference.child(key).setValue(umkr);
-                                                        Toast.makeText(getApplicationContext(), R.string.success_modify, Toast.LENGTH_SHORT).show();
-                                                    }
-
-                                                }
-
-                                                @Override
-                                                public void onCancelled(DatabaseError databaseError) {
-                                                    // Getting Post failed, log a message
-                                                    // ...
-                                                }
-                                            };
-                                            mUMkrReference.child(key).addListenerForSingleValueEvent(postListener);
-
-                                        }
-
-
-                                    }
-                                })
-                                .setNegativeButton(R.string.cancel,new DialogInterface.OnClickListener(){
-                                    @Override
-                                    public void onClick(DialogInterface dialog, int which) {
-                                    }
-                                })
-                                .show();
-
-                    }
-                })
-                .setNegativeButton(R.string.del_mkr, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        String key = (String) marker.getTag();
-                        ValueEventListener postListener = new ValueEventListener() {
-                            @Override
-                            public void onDataChange(DataSnapshot dataSnapshot) {
-                                UserMkr usermkr = dataSnapshot.getValue(UserMkr.class);
-                                if (usermkr != null) {
-                                    lastemail = usermkr.Email;
-                                }
-                            }
-                            @Override
-                            public void onCancelled(DatabaseError databaseError) {
-                                // Getting Post failed, log a message
-                                // ...
-                            }
-                        };
-                        mUMkrReference.child(key).addListenerForSingleValueEvent(postListener);
-                        mUMkrReference.child(key).removeValue();
-                        lastkey=key;
-
-
-                    }
-                })
-                .setNeutralButton(R.string.cancel, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                    }
-                })
-                .show();*/
     }
 
     /**
@@ -1098,6 +961,139 @@ public class MapsActivity extends AppCompatActivity
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.menuu, menu);
         toolbarmenu=menu;
+        MenuItem usermkritem = menu.findItem(R.id.addusermkr);
+        MenuItemCompat.setActionView(usermkritem, R.layout.action_menu);
+        View menuLayout = MenuItemCompat.getActionView(usermkritem);
+        View v = menuLayout.findViewById(R.id.button1);
+        placeholder = v;
+        v.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(issearch){
+                    //toolbarmenu.getItem(1).setIcon(getResources().getDrawable(R.drawable.placeholder));
+                    v.setBackground(getResources().getDrawable(R.drawable.placeholder));
+                    toolbarmenu.getItem(2).setVisible(true);
+                    bar_scrollvw.setVisibility(View.GONE);
+                    issearch = false;
+                }
+                else {
+                    if (UMkrNumLimit > 0) {
+                        // [START_EXCLUDE]
+                        final double[] CameraLat = new double[1];
+                        final double[] CameraLon = new double[1];
+                        mMap.setOnMapLoadedCallback(new GoogleMap.OnMapLoadedCallback() {
+                            @Override
+                            public void onMapLoaded() {
+                                CameraLat[0] = mMap.getCameraPosition().target.latitude;
+                                CameraLon[0] = mMap.getCameraPosition().target.longitude;
+                                submitUmkrlocation(Double.toString(CameraLat[0]), Double.toString(CameraLon[0]));
+                            }
+                        });
+
+                    } else {
+                        Toast.makeText(MapsActivity.this, "標記已達上限，無法再增加!", Toast.LENGTH_LONG).show();
+                    }
+                }
+            }
+        });
+        v.setOnLongClickListener(new View.OnLongClickListener() {
+            public boolean onLongClick(View v) {
+                if (isfollowmode)//追隨模式中不可使用相關功能
+                    return false;
+                //判斷該標記是不是自訂標記，不是的話不做任何動作
+                int size = UmarkerList.size();
+                int flag = 0;
+                String title = null;
+                Marker thismkr = null;
+                for (int m = 0; m < size; ++m) {
+                    Marker mkr  = UmarkerList.get(m);
+                    String tag = (String) mkr.getTag();
+                    String tag2 = usermkrkey.get(0);
+                    if (tag != null && tag2 != null)
+                        if (tag.equals(tag2)) {
+                            flag = 1;
+                            title = mkr.getTitle();
+                            thismkr = mkr;
+                        }
+                }
+                if (flag == 0) {
+                    return false;
+                }
+                //自訂標記的相關功能-修改刪除
+                final View item = LayoutInflater.from(MapsActivity.this).inflate(R.layout.modify_mkrtitle, null);
+                final Marker finalThismkr = thismkr;
+                new AlertDialog.Builder(MapsActivity.this, R.style.MyDialogTheme)
+                        .setTitle(title)
+                        .setCancelable(true)
+                        .setMessage("選擇修改或是刪除自訂標記")
+                        .setPositiveButton(R.string.Change_Title, new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                new AlertDialog.Builder(MapsActivity.this, R.style.MyDialogTheme)
+                                        .setTitle("修改自訂標記名稱")
+                                        .setView(item)
+                                        .setCancelable(true)
+                                        .setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
+                                            @Override
+                                            public void onClick(DialogInterface dialog, int which) {
+                                                EditText e = (EditText) item.findViewById(R.id.edit_text);
+                                                String s = e.getText().toString();
+                                                if (TextUtils.isEmpty(s)) {
+                                                    e.setError("Name can not be empty");
+                                                } else {
+                                                    finalThismkr.setTitle(e.getText().toString());
+                                                    final LatLng L = finalThismkr.getPosition();
+                                                    final String key = (String) finalThismkr.getTag();
+                                                    ValueEventListener postListener = new ValueEventListener() {
+                                                        @Override
+                                                        public void onDataChange(DataSnapshot dataSnapshot) {
+                                                            UserMkr usermkr = dataSnapshot.getValue(UserMkr.class);
+                                                            UserMkr umkr;
+                                                            if (usermkr != null) {
+                                                                umkr = new UserMkr(Double.toString(L.latitude), Double.toString(L.longitude), finalThismkr.getTitle(), usermkr.Email);
+                                                                mUMkrReference.child(key).setValue(umkr);
+                                                                Toast.makeText(getApplicationContext(), R.string.success_modify, Toast.LENGTH_SHORT).show();
+                                                            }
+                                                        }
+
+                                                        @Override
+                                                        public void onCancelled(DatabaseError databaseError) {
+                                                            // Getting Post failed, log a message
+                                                            // ...
+                                                        }
+                                                    };
+                                                    mUMkrReference.child(key).addListenerForSingleValueEvent(postListener);
+                                                }
+                                            }
+                                        })
+                                        .setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
+                                            @Override
+                                            public void onClick(DialogInterface dialog, int which) {
+                                            }
+                                        })
+                                        .show();
+
+                            }
+                        })
+                        .setNegativeButton(R.string.del_mkr, new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                String key = (String) finalThismkr.getTag();
+                                if (key != null) {
+                                    mUMkrReference.child(key).removeValue();
+                                }
+                            }
+                        })
+                        .setNeutralButton(R.string.cancel, new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                            }
+                        })
+                        .show();
+                return  false;
+            }
+        });
+        usermkritem.setActionView(v);
         return true;
     }
     @Override
@@ -1108,37 +1104,14 @@ public class MapsActivity extends AppCompatActivity
             return true;
         }
         else if(id == R.id.addusermkr){
-            if(issearch){
-                toolbarmenu.getItem(1).setIcon(getResources().getDrawable(R.drawable.placeholder));
-                toolbarmenu.getItem(2).setVisible(true);
-                bar_scrollvw.setVisibility(View.GONE);
-                issearch = false;
-            }
-            else {
-                if (UMkrNumLimit > 0) {
-                    // [START_EXCLUDE]
-                    final double[] CameraLat = new double[1];
-                    final double[] CameraLon = new double[1];
-                    mMap.setOnMapLoadedCallback(new GoogleMap.OnMapLoadedCallback() {
-                        @Override
-                        public void onMapLoaded() {
-                            CameraLat[0] = mMap.getCameraPosition().target.latitude;
-                            CameraLon[0] = mMap.getCameraPosition().target.longitude;
-                            submitUmkrlocation(Double.toString(CameraLat[0]), Double.toString(CameraLon[0]));
-                        }
-                    });
-
-                } else {
-                    Toast.makeText(MapsActivity.this, "標記已達上限，無法再增加!", Toast.LENGTH_LONG).show();
-                }
-            }
-            return true;
+            //複寫在上面createoptionmenu
         }
         else if (id == R.id.search_place)
         {
             if(!issearch){
-                toolbarmenu.getItem(1).setIcon(getResources().getDrawable(R.drawable.cross));
+                //toolbarmenu.getItem(1).setIcon(getResources().getDrawable(R.drawable.cross));
                 toolbarmenu.getItem(2).setVisible(false);
+                placeholder.setBackground(getResources().getDrawable(R.drawable.cross));
                 bar_scrollvw.setVisibility(View.VISIBLE);
                 issearch = true;
                 try {
@@ -1714,6 +1687,7 @@ public class MapsActivity extends AppCompatActivity
                         naviplaces[p]=new MarkerOptions()
                                 .position(placeLL)
                                 .title(placeName)
+                                .icon(BitmapDescriptorFactory.fromResource(R.drawable.bread2))
                                 .snippet("地址: "+vicinity+"\n"+"評分: "+rating);
                     }
                 }
@@ -1815,12 +1789,14 @@ public class MapsActivity extends AppCompatActivity
                             places[p]=new MarkerOptions()
                                     .position(placeLL)
                                     .title(placeName)
+                                    .icon(BitmapDescriptorFactory.fromResource(R.drawable.bread))
                                     .snippet("地址: "+vicinity+"\n"+"評分: "+rating+"\n距離: "+Distance+"M");
                         }else{
                             Distance = Distance /1000;
                             places[p]=new MarkerOptions()
                                     .position(placeLL)
                                     .title(placeName)
+                                    .icon(BitmapDescriptorFactory.fromResource(R.drawable.bread))
                                     .snippet("地址: "+vicinity+"\n"+"評分: "+rating+"\n距離: "+Distance+"KM");
                         }
 
@@ -1963,16 +1939,16 @@ public class MapsActivity extends AppCompatActivity
                             finalplacemkr.showInfoWindow();
                         }
                         else if (cp == 6) {
-                            for (int p = 0; p < placeMarkers.size(); p++) {
+                            /*for (int p = 0; p < placeMarkers.size(); p++) {
                                 //will be null if a value was missing
                                 if (placeMarkers.get(p) != null) {
                                     placeMarkers.get(p).setIcon(BitmapDescriptorFactory.defaultMarker(0));
                                     placeMarkers.get(p).setAlpha(0.6f);
                                 }
-                            }
+                            }*/
                             int id = menuItem.getItemId();
-                            placeMarkers.get(id).setIcon(BitmapDescriptorFactory.defaultMarker(20));
-                            placeMarkers.get(id).setAlpha(1.0f);
+                            /*placeMarkers.get(id).setIcon(BitmapDescriptorFactory.defaultMarker(20));
+                            placeMarkers.get(id).setAlpha(1.0f);*/
                             placeMarkers.get(id).showInfoWindow();
                             mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
                                     new LatLng(placeMarkers.get(id).getPosition().latitude,
@@ -1980,16 +1956,16 @@ public class MapsActivity extends AppCompatActivity
                             );
                         }
                         else if( cp == 7){
-                            for (int p = 0; p < naviMarkers.size(); p++) {
+                            /*for (int p = 0; p < naviMarkers.size(); p++) {
                                 //will be null if a value was missing
                                 if (naviMarkers.get(p) != null) {
                                     naviMarkers.get(p).setIcon(BitmapDescriptorFactory.defaultMarker(0));
                                     naviMarkers.get(p).setAlpha(0.6f);
                                 }
-                            }
+                            }*/
                             int id = menuItem.getItemId();
-                            naviMarkers.get(id).setIcon(BitmapDescriptorFactory.defaultMarker(20));
-                            naviMarkers.get(id).setAlpha(1.0f);
+                            /*naviMarkers.get(id).setIcon(BitmapDescriptorFactory.defaultMarker(20));
+                            naviMarkers.get(id).setAlpha(1.0f);*/
                             naviMarkers.get(id).showInfoWindow();
                             mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
                                     new LatLng(naviMarkers.get(id).getPosition().latitude,
@@ -2055,9 +2031,12 @@ public class MapsActivity extends AppCompatActivity
                     // [START_EXCLUDE]
                     LatLng latLng = new LatLng(Double.parseDouble(user.Lat), Double.parseDouble(user.Lon));
                     //Log.i("Lat",user.Lat);
+                    /*Marker marker=mMap.addMarker(new MarkerOptions().position(latLng)
+                            .title(user.nickname)
+                            .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_MAGENTA)));*/
                     Marker marker=mMap.addMarker(new MarkerOptions().position(latLng)
                             .title(user.nickname)
-                            .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_MAGENTA)));
+                            .icon(BitmapDescriptorFactory.fromResource(R.drawable.member_mkr)));
                     marker.setTag(userKey);
                     markersList.add(marker);
                     chatmember.add(user.nickname);
@@ -2131,6 +2110,7 @@ public class MapsActivity extends AppCompatActivity
                     marker.setTag(key);
                     UmarkerList.add(marker);
                     if(email.equals(usermkr.Email)){
+                        usermkrkey.add(key);
                         UMkrNumLimit--;
                     }
                 }
@@ -2568,7 +2548,7 @@ public class MapsActivity extends AppCompatActivity
                             placeMarkers.add(ky, mMap.addMarker(new MarkerOptions().position(l)
                                     .title(np.title)
                                     .snippet(np.vicinity)
-                                    .icon(BitmapDescriptorFactory.defaultMarker(0))
+                                    .icon(BitmapDescriptorFactory.fromResource(R.drawable.bread))
                                     .draggable(false)));
                             placeMarkers.get(ky).setTag("nearplace");
                         }
@@ -3371,7 +3351,7 @@ public class MapsActivity extends AppCompatActivity
             for(int i = 0 ; i <temp.size();i++ ){
                 LatLng l =new LatLng (Double.parseDouble(temp.get(i).lat),Double.parseDouble(temp.get(i).lon));
                 try{
-                    MarkerOptions option = new MarkerOptions().position(l).title(temp.get(i).title).snippet(temp.get(i).vicinity);
+                    MarkerOptions option = new MarkerOptions().position(l).title(temp.get(i).title).snippet(temp.get(i).vicinity).icon(BitmapDescriptorFactory.fromResource(R.drawable.bread));
                     placeMarkers.add(i,mMap.addMarker(option));
                     placeMarkers.get(i).setTag("nearplace");
                 }
@@ -3385,7 +3365,7 @@ public class MapsActivity extends AppCompatActivity
             for(int i = 0 ; i <temp2.size();i++ ){
                 LatLng l =new LatLng (Double.parseDouble(temp2.get(i).lat),Double.parseDouble(temp2.get(i).lon));
                 try{
-                    MarkerOptions option = new MarkerOptions().position(l).title(temp2.get(i).title).snippet(temp2.get(i).vicinity);
+                    MarkerOptions option = new MarkerOptions().position(l).title(temp2.get(i).title).snippet(temp2.get(i).vicinity).icon(BitmapDescriptorFactory.fromResource(R.drawable.bread2));
                     naviMarkers.add(i,mMap.addMarker(option));
                     naviMarkers.get(i).setTag("naviplace");
                 }
