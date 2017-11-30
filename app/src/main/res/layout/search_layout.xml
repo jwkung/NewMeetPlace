@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:orientation="vertical" android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="@color/search_background">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -24,8 +25,9 @@
 
             <Button
                 android:id="@+id/button3"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+                android:layout_width="113dp"
+                android:layout_height="43dp"
+                android:background="@drawable/buttonshape"
                 android:onClick="search"
                 android:text="搜尋" />
 
@@ -36,7 +38,7 @@
     <ListView
         android:id="@+id/list"
         android:layout_width="match_parent"
-        android:layout_height="300dp">
+        android:layout_height="316dp">
 
     </ListView>
 
@@ -66,6 +68,7 @@
         android:id="@+id/button5"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:background="@drawable/buttonshape"
         android:onClick="searchcheck"
         android:text="確定" />
 
@@ -73,7 +76,7 @@
         android:id="@+id/button10"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_weight="2"
+        android:background="@drawable/buttonshape"
         android:onClick="friend_pick"
         android:text="選擇好友" />
 

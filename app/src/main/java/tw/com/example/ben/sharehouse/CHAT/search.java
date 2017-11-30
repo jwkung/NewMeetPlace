@@ -263,4 +263,46 @@ public class search extends AppCompatActivity implements AdapterView.OnItemClick
     public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
         Log.v("444","444444444");
     }
+
+    @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        if(edt_housename.getText().toString().length() != 0 && flag != false){
+            new Firebase(GV.getSearch_House_Name()).child("name").setValue(edt_housename.getText().toString());
+        }
+        if(flag == false){
+
+            MyUser myUser= (MyUser) tinyDB.getObject("MyUser", MyUser.class);
+            String UserKey = myUser.getNickname();
+
+            FirebaseDatabase db = FirebaseDatabase.getInstance();
+            final DatabaseReference Ref= db.getReference();
+            final Query deleteQuery = Ref.child("userHouseTables").child(UserKey).orderByChild("url").equalTo(GV.getSearch_House_Name());
+            deleteQuery.addChildEventListener(new ChildEventListener() {
+                @Override
+                public void onChildAdded(DataSnapshot dataSnapshot, String s) {
+                    if(dataSnapshot.exists()){
+                        Log.v("deletehouse",dataSnapshot.getRef().toString());
+                        dataSnapshot.getRef().setValue(null);
+                        deleteQuery.removeEventListener(this);
+                    }
+                }
+
+                @Override
+                public void onChildChanged(DataSnapshot dataSnapshot, String s) {  }
+
+                @Override
+                public void onChildRemoved(DataSnapshot dataSnapshot) {  }
+
+                @Override
+                public void onChildMoved(DataSnapshot dataSnapshot, String s) {   }
+
+                @Override
+                public void onCancelled(DatabaseError databaseError) {   }
+            });
+            new Firebase(GV.getSearch_House_Name()).removeValue();
+        }
+
+        finish();
+    }
 }
