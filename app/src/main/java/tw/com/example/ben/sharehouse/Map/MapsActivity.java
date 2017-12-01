@@ -1572,7 +1572,7 @@ public class MapsActivity extends AppCompatActivity
                     if(searchmarker == null){
                         searchmarker = mMap.addMarker(mkrop);
                         searchmarker.setTag("searchmarker");
-                        searchmarker.setIcon(BitmapDescriptorFactory.defaultMarker(200));
+                        searchmarker.setIcon(BitmapDescriptorFactory.fromResource(R.drawable.searchmkr));
                     }
                     else {
                         searchmarker.setPosition(mkrop.getPosition());
@@ -1687,7 +1687,7 @@ public class MapsActivity extends AppCompatActivity
                         naviplaces[p]=new MarkerOptions()
                                 .position(placeLL)
                                 .title(placeName)
-                                .icon(BitmapDescriptorFactory.fromResource(R.drawable.bread2))
+                                .icon(BitmapDescriptorFactory.fromResource(R.drawable.nearplace2))
                                 .snippet("地址: "+vicinity+"\n"+"評分: "+rating);
                     }
                 }
@@ -1776,8 +1776,8 @@ public class MapsActivity extends AppCompatActivity
                         for(int m=0 ; m < size; ++m) {
                             Marker mkr;
                             mkr = markersList.get(m);
-                            String key = (String) mkr.getTitle();
-                            if(key != null && key.equals(getEmail())){
+                            String key = (String) mkr.getTag();
+                            if(key != null && key.equals(getUid())){
                                 user_lat = mkr.getPosition().latitude;
                                 user_lng = mkr.getPosition().longitude;
                             }
@@ -1789,15 +1789,15 @@ public class MapsActivity extends AppCompatActivity
                             places[p]=new MarkerOptions()
                                     .position(placeLL)
                                     .title(placeName)
-                                    .icon(BitmapDescriptorFactory.fromResource(R.drawable.bread))
-                                    .snippet("地址: "+vicinity+"\n"+"評分: "+rating+"\n距離: "+Distance+"M");
+                                    .icon(BitmapDescriptorFactory.fromResource(R.drawable.nearplace))
+                                    .snippet("地址: "+vicinity+"\n"+"評分: "+rating+"\n距離: "+String.valueOf(Distance)+"M");
                         }else{
                             Distance = Distance /1000;
                             places[p]=new MarkerOptions()
                                     .position(placeLL)
                                     .title(placeName)
-                                    .icon(BitmapDescriptorFactory.fromResource(R.drawable.bread))
-                                    .snippet("地址: "+vicinity+"\n"+"評分: "+rating+"\n距離: "+Distance+"KM");
+                                    .icon(BitmapDescriptorFactory.fromResource(R.drawable.nearplace))
+                                    .snippet("地址: "+vicinity+"\n"+"評分: "+rating+"\n距離: "+String.valueOf(Distance)+"KM");
                         }
 
 
@@ -1844,7 +1844,7 @@ public class MapsActivity extends AppCompatActivity
                 }
                 centermarker = mMap.addMarker(new MarkerOptions().position(centerpoint)
                         .title("Center Point")
-                        .icon(BitmapDescriptorFactory.defaultMarker(100))
+                        .icon(BitmapDescriptorFactory.fromResource(R.drawable.centermkr))
                         .draggable(false));
                 centermarker.setTag("Centermarker");
                 CenterPoint cp = new CenterPoint(Double.toString(lat[0]),Double.toString(lon[0]));
@@ -2036,7 +2036,8 @@ public class MapsActivity extends AppCompatActivity
                             .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_MAGENTA)));*/
                     Marker marker=mMap.addMarker(new MarkerOptions().position(latLng)
                             .title(user.nickname)
-                            .icon(BitmapDescriptorFactory.fromResource(R.drawable.member_mkr)));
+                            .icon(BitmapDescriptorFactory.defaultMarker(0))
+                            );
                     marker.setTag(userKey);
                     markersList.add(marker);
                     chatmember.add(user.nickname);
@@ -2105,7 +2106,7 @@ public class MapsActivity extends AppCompatActivity
                     latLng = new LatLng(Double.parseDouble(usermkr.Lat), Double.parseDouble(usermkr.Lon));
                     Marker marker = mMap.addMarker(new MarkerOptions().position(latLng)
                             .title(usermkr.Title)
-                            .icon(BitmapDescriptorFactory.defaultMarker(60))
+                            .icon(BitmapDescriptorFactory.fromResource(R.drawable.custom))
                             .draggable(true));
                     marker.setTag(key);
                     UmarkerList.add(marker);
@@ -2496,7 +2497,7 @@ public class MapsActivity extends AppCompatActivity
                             naviMarkers.add(ky, mMap.addMarker(new MarkerOptions().position(l)
                                     .title(np.title)
                                     .snippet(np.vicinity)
-                                    .icon(BitmapDescriptorFactory.defaultMarker(0))
+                                    .icon(BitmapDescriptorFactory.fromResource(R.drawable.nearplace2))
                                     .draggable(false)));
                             naviMarkers.get(ky).setTag("naviplace");
                         }
@@ -2548,7 +2549,7 @@ public class MapsActivity extends AppCompatActivity
                             placeMarkers.add(ky, mMap.addMarker(new MarkerOptions().position(l)
                                     .title(np.title)
                                     .snippet(np.vicinity)
-                                    .icon(BitmapDescriptorFactory.fromResource(R.drawable.bread))
+                                    .icon(BitmapDescriptorFactory.fromResource(R.drawable.nearplace))
                                     .draggable(false)));
                             placeMarkers.get(ky).setTag("nearplace");
                         }
@@ -2656,7 +2657,7 @@ public class MapsActivity extends AppCompatActivity
                             centerpoint = new LatLng(Double.parseDouble(cp.lat), Double.parseDouble(cp.lon));
                             centermarker = mMap.addMarker(new MarkerOptions().position(centerpoint)
                                     .title("Center Point ")
-                                    .icon(BitmapDescriptorFactory.defaultMarker(100))
+                                    .icon(BitmapDescriptorFactory.fromResource(R.drawable.centermkr))
                                     .draggable(false));
                             centermarker.setTag("Centermarker");
                         }
@@ -2755,7 +2756,7 @@ public class MapsActivity extends AppCompatActivity
                             searchmarker = mMap.addMarker(new MarkerOptions().position(new LatLng(Double.parseDouble(searchmkr.lat), Double.parseDouble(searchmkr.lon)))
                                     .title(searchmkr.title)
                                     .snippet(searchmkr.vicinity)
-                                    .icon(BitmapDescriptorFactory.defaultMarker(200))
+                                    .icon(BitmapDescriptorFactory.fromResource(R.drawable.searchmkr))
                                     .draggable(false));
                             searchmarker.setTag("searchmarker");
                         }
@@ -3130,7 +3131,7 @@ public class MapsActivity extends AppCompatActivity
                     LatLng l = new LatLng(Double.parseDouble(fp.lat),Double.parseDouble(fp.lon));
                     finalplacemkr = mMap.addMarker(new MarkerOptions().position(l)
                             .title(fp.title)
-                            .icon(BitmapDescriptorFactory.defaultMarker(150)));
+                            .icon(BitmapDescriptorFactory.fromResource(R.drawable.finplace)));
                     finalplacemkr.setTag("FinalPlace");
 
                 }
@@ -3351,7 +3352,7 @@ public class MapsActivity extends AppCompatActivity
             for(int i = 0 ; i <temp.size();i++ ){
                 LatLng l =new LatLng (Double.parseDouble(temp.get(i).lat),Double.parseDouble(temp.get(i).lon));
                 try{
-                    MarkerOptions option = new MarkerOptions().position(l).title(temp.get(i).title).snippet(temp.get(i).vicinity).icon(BitmapDescriptorFactory.fromResource(R.drawable.bread));
+                    MarkerOptions option = new MarkerOptions().position(l).title(temp.get(i).title).snippet(temp.get(i).vicinity).icon(BitmapDescriptorFactory.fromResource(R.drawable.nearplace));
                     placeMarkers.add(i,mMap.addMarker(option));
                     placeMarkers.get(i).setTag("nearplace");
                 }
@@ -3365,7 +3366,7 @@ public class MapsActivity extends AppCompatActivity
             for(int i = 0 ; i <temp2.size();i++ ){
                 LatLng l =new LatLng (Double.parseDouble(temp2.get(i).lat),Double.parseDouble(temp2.get(i).lon));
                 try{
-                    MarkerOptions option = new MarkerOptions().position(l).title(temp2.get(i).title).snippet(temp2.get(i).vicinity).icon(BitmapDescriptorFactory.fromResource(R.drawable.bread2));
+                    MarkerOptions option = new MarkerOptions().position(l).title(temp2.get(i).title).snippet(temp2.get(i).vicinity).icon(BitmapDescriptorFactory.fromResource(R.drawable.nearplace2));
                     naviMarkers.add(i,mMap.addMarker(option));
                     naviMarkers.get(i).setTag("naviplace");
                 }

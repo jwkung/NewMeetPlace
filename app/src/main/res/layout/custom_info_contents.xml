@@ -11,7 +11,7 @@
 
     <TextView
         android:id="@+id/title"
-        android:layout_width="match_parent"
+        android:layout_width="150dp"
         android:layout_height="30dp"
         android:layout_gravity="center_horizontal"
         android:layout_marginLeft="15dp"
@@ -26,15 +26,15 @@
 
     <TextView
         android:id="@+id/snippet"
-        android:layout_width="match_parent"
-        android:layout_height="80dp"
+        android:layout_width="200dp"
+        android:layout_height="wrap_content"
         android:layout_marginBottom="10dp"
         android:layout_marginLeft="15dp"
         android:layout_marginRight="15dp"
         android:fontFamily="casual"
+        android:singleLine="false"
         android:textColor="@color/infowindowtextcolor"
         android:textSize="16sp"
         android:textStyle="bold"
-        android:visibility="visible"
-        tools:text="123" />
+        android:visibility="visible" />
 </LinearLayout>
