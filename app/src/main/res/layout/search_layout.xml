@@ -6,7 +6,7 @@
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="71dp"
+        android:layout_height="55dp"
         android:orientation="vertical">
 
         <LinearLayout
@@ -76,6 +76,7 @@
         android:layout_marginEnd="5dp"
         android:layout_marginStart="5dp"
         android:layout_marginTop="3dp"
+        android:layout_weight="0.5"
         android:background="@drawable/buttonshape"
         android:onClick="searchcheck"
         android:text="確定" />
@@ -87,6 +88,7 @@
         android:layout_marginBottom="3dp"
         android:layout_marginEnd="5dp"
         android:layout_marginStart="5dp"
+        android:layout_weight="0.5"
         android:background="@drawable/buttonshape"
         android:onClick="friend_pick"
         android:text="選擇好友" />

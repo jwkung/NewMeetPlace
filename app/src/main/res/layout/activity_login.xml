@@ -88,16 +88,16 @@
                         android:layout_height="50dp"
                         android:layout_gravity="center_horizontal"
                         android:layout_marginTop="16dp"
-                        android:onClick="login"
-                        android:text="登入"
-                        android:textAlignment="center"
-                        android:textColor="#FFFFFF"
-                        android:textSize="18sp"
                         android:background="@drawable/buttonshape"
+                        android:onClick="login"
                         android:shadowColor="#2B2818"
                         android:shadowDx="2"
                         android:shadowDy="0"
                         android:shadowRadius="5"
+                        android:text="登入"
+                        android:textAlignment="center"
+                        android:textColor="#FFFFFF"
+                        android:textSize="18sp"
                         android:textStyle="bold" />
 
                     <Button
