@@ -105,6 +105,7 @@ public class MainActivity extends AppCompatActivity
         } else {
             super.onBackPressed();
         }
+        finish();
     }
     //右上角選單
     @Override
